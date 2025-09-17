@@ -7,6 +7,7 @@ const { div, button, a } = van.tags;
 
 import { DirectoryView, FsItemState } from "./fs";
 import { TypstDocument, Doc } from "./doc";
+import { storageSpecFromUrl } from "./storage";
 
 let $typst = window.$typst;
 
@@ -28,85 +29,9 @@ const App = () => {
     /// Captures font load status
     fontLoaded = van.state(false),
     /// Binds to filesystem reload event
-    reloadBell = van.state(false);
-  // window.location.pathname
-
-  // @ts-ignore
-  const isDev = false; // import.meta.env !== undefined;
-
-  const storage = (() => {
-    if (isDev) {
-      console.log("isDev");
-      const rest = ["charged-ieee", "template", "main.typ"];
-      return {
-        type: "github" as const,
-        domain: "github.com",
-        user: "typst",
-        repo: "templates",
-        kind: "blob",
-        ref: "main",
-        rest,
-        slug: rest.join("/"),
-      };
-    }
-    const inputPath = window.location.pathname.slice(1) || "";
-    let inputPathSplits = inputPath.split("/");
-    let domain = "github.com";
-    let type: "github" | "forgejo" = "github";
-    if (inputPathSplits[0].includes(".")) {
-      // @ts-ignore
-      domain = inputPathSplits.shift(); 
-      if (inputPathSplits[2] == "src") {
-        type = "forgejo";
-      }
-    }
-
-    let user, repo, ref, kind, rest;
-    if (type == "github") {
-      user = inputPathSplits[0];
-      repo = inputPathSplits[1];
-      kind = inputPathSplits[2];
-      ref = inputPathSplits[3];
-      rest = inputPathSplits.slice(4);
-    } else if (type == "forgejo") {
-      user = inputPathSplits[0];
-      repo = inputPathSplits[1];
-      ref = inputPathSplits[4];
-      rest = inputPathSplits.slice(5);
-      kind = "blob"; // forgejo seems not to have the kind in the url
-    } else {
-      throw Error;
-    }
-
-    if (!ref) {
-      return {
-        type: "github" as const,
-        domain: "https://github.com",
-        user: "Myriad-Dreamin",
-        repo: "gistd",
-        kind: "blob",
-        ref: "main",
-        rest: ["README.typ"],
-        slug: "README.typ",
-      };
-    }
-
-    return {
-      type: type,
-      domain,
-      user,
-      repo,
-      kind,
-      ref,
-      rest,
-      slug: rest.join("/"),
-    };
-  })();
-  console.log("storage", storage);
-
-  const mainFilePath = `/repo/${storage.slug}`;
-
-  const url = `https://${storage.domain}/${window.location.pathname}`;
+    reloadBell = van.state(false),
+    /// Creates storage spec from url
+    storage = storageSpecFromUrl();
 
   /// Styles and outputs
   const /// The source code state
@@ -119,6 +44,10 @@ const App = () => {
     changeFocusFile = van.state<FsItemState | undefined>(undefined),
     /// The current focus file
     focusFile = van.state<FsItemState | undefined>(undefined);
+
+  const mainFilePath = `/repo/${storage.slug}`;
+  const url = `https://${storage.domain}/${window.location.pathname}`;
+  console.log("storage", storage);
 
   /// Checks compiler status
   window.$typst$script.then(async () => {

@@ -5,9 +5,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:update": "vitest -u"
   },
   "keywords": [],
   "author": "",
@@ -15,7 +17,8 @@
   "packageManager": "pnpm@10.16.1",
   "devDependencies": {
     "vite": "^7.1.5",
-    "vite-plugin-singlefile": "^2.3.0"
+    "vite-plugin-singlefile": "^2.3.0",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@isomorphic-git/lightning-fs": "^4.6.2",
