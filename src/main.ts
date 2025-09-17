@@ -50,6 +50,19 @@ const App = () => {
     }
     const ghPath = window.location.pathname.slice(1) || "";
     const [user, repo, kind, ref, ...rest] = ghPath.split("/");
+
+    if (!ref) {
+      return {
+        type: "github" as const,
+        user: "Myriad-Dreamin",
+        repo: "gistd",
+        kind: "blob",
+        ref: "main",
+        rest: ["README.typ"],
+        slug: "README.typ",
+      };
+    }
+
     return {
       type: "github" as const,
       user,
