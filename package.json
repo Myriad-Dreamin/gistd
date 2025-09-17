@@ -1,0 +1,26 @@
+{
+  "name": "gistd",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.16.1",
+  "devDependencies": {
+    "vite": "^7.1.5",
+    "vite-plugin-singlefile": "^2.3.0"
+  },
+  "dependencies": {
+    "@isomorphic-git/lightning-fs": "^4.6.2",
+    "@myriaddreamin/typst.ts": "0.6.1-rc3",
+    "isomorphic-git": "^1.33.1",
+    "vanjs-core": "^1.5.5"
+  }
+}
