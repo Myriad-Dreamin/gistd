@@ -240,11 +240,20 @@ export const DirectoryView = ({
 
     console.log("start to load fs to compiler");
 
-    for (const fileName of await fs.promises.readdir(projectDir)) {
-      const filePath = dirJoin(projectDir, fileName);
-      const data = (await fs.promises.readFile(filePath)) as Uint8Array;
-      fsState.val = fsState.val.add(filePath, data);
+    async function addPath(path: string) {
+      // read type
+      const type = await fs.promises.stat(path);
+      if (type.isDirectory()) {
+        for (const fileName of await fs.promises.readdir(path)) {
+          await addPath(dirJoin(path, fileName));
+        }
+      } else {
+        const data = await fs.promises.readFile(path);
+        fsState.val = fsState.val!.add(path, data);
+      }
     }
+
+    await addPath(projectDir);
 
     reloadAll(fsState.val);
     console.log("git fs done");

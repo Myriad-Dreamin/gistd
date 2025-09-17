@@ -33,19 +33,39 @@ const App = () => {
     reloadBell = van.state(false);
   // window.location.pathname
 
-  const ghPath = window.location.pathname.slice(1) || "";
-  const [user, repo, kind, ref, ...rest] = ghPath.split("/");
-  const storage = {
-    type: "github" as const,
-    user,
-    repo,
-    kind,
-    ref,
-    rest,
-    slug: rest.join("/"),
-  };
+  // @ts-ignore
+  const isDev = import.meta.env !== undefined;
 
-  const mainFilePath = `/repo/${rest.join("/")}`;
+  const storage = (() => {
+    if (isDev) {
+      console.log("isDev");
+      //   https://gistd.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ
+      const rest = ["charged-ieee", "template", "main.typ"];
+      return {
+        type: "github" as const,
+        user: "typst",
+        repo: "templates",
+        kind: "blob",
+        ref: "main",
+        rest,
+        slug: rest.join("/"),
+      };
+    }
+    const ghPath = window.location.pathname.slice(1) || "";
+    const [user, repo, kind, ref, ...rest] = ghPath.split("/");
+    return {
+      type: "github" as const,
+      user,
+      repo,
+      kind,
+      ref,
+      rest,
+      slug: rest.join("/"),
+    };
+  })();
+  console.log("storage", storage);
+
+  const mainFilePath = `/repo/${storage.slug}`;
 
   const url = `https://github.com/${window.location.pathname}`;
 
@@ -119,7 +139,8 @@ const App = () => {
   });
 
   // get last part of the path
-  const lastPart = rest.length > 0 ? rest[rest.length - 1] : "main";
+  const lastPart =
+    storage.rest.length > 0 ? storage.rest[storage.rest.length - 1] : "main";
   const removeExtension = lastPart.replace(/\.typ$/, "");
 
   const exportAs = (data: string | Uint8Array, mime: string) => {
@@ -194,7 +215,7 @@ const App = () => {
           style:
             "display: flex; align-items: center; text-align: center; text-decoration: underline; padding-left: 10px",
         },
-        "GitHub: " + user + "/" + repo + " " + lastPart
+        "GitHub: " + storage.user + "/" + storage.repo + " " + lastPart
       ),
       div(
         { class: "gistd-toolbar-row flex-row" },
