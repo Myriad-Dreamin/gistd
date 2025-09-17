@@ -40,6 +40,7 @@ const App = () => {
       const rest = ["charged-ieee", "template", "main.typ"];
       return {
         type: "github" as const,
+        domain: "github.com",
         user: "typst",
         repo: "templates",
         kind: "blob",
@@ -48,12 +49,39 @@ const App = () => {
         slug: rest.join("/"),
       };
     }
-    const ghPath = window.location.pathname.slice(1) || "";
-    const [user, repo, kind, ref, ...rest] = ghPath.split("/");
+    const inputPath = window.location.pathname.slice(1) || "";
+    let inputPathSplits = inputPath.split("/");
+    let domain = "github.com";
+    let type: "github" | "forgejo" = "github";
+    if (inputPathSplits[0].includes(".")) {
+      // @ts-ignore
+      domain = inputPathSplits.shift(); 
+      if (inputPathSplits[2] == "src") {
+        type = "forgejo";
+      }
+    }
+
+    let user, repo, ref, kind, rest;
+    if (type == "github") {
+      user = inputPathSplits[0];
+      repo = inputPathSplits[1];
+      kind = inputPathSplits[2];
+      ref = inputPathSplits[3];
+      rest = inputPathSplits.slice(4);
+    } else if (type == "forgejo") {
+      user = inputPathSplits[0];
+      repo = inputPathSplits[1];
+      ref = inputPathSplits[4];
+      rest = inputPathSplits.slice(5);
+      kind = "blob"; // forgejo seems not to have the kind in the url
+    } else {
+      throw Error;
+    }
 
     if (!ref) {
       return {
         type: "github" as const,
+        domain: "https://github.com",
         user: "Myriad-Dreamin",
         repo: "gistd",
         kind: "blob",
@@ -64,7 +92,8 @@ const App = () => {
     }
 
     return {
-      type: "github" as const,
+      type: type,
+      domain,
       user,
       repo,
       kind,
@@ -77,7 +106,7 @@ const App = () => {
 
   const mainFilePath = `/repo/${storage.slug}`;
 
-  const url = `https://github.com/${window.location.pathname}`;
+  const url = `https://${storage.domain}/${window.location.pathname}`;
 
   /// Styles and outputs
   const /// The source code state

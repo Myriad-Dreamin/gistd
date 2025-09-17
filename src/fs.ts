@@ -136,7 +136,8 @@ export interface DirectoryViewState {
 }
 
 export interface DirectoryViewStorage {
-  type: "github";
+  type: "github" | "forgejo";
+  domain: string,
   user: string;
   repo: string;
   kind: string;
@@ -214,7 +215,7 @@ export const DirectoryView = ({
         },
       },
       dir: gitRepoDir,
-      url: `https://github.com/${storage.user}/${storage.repo}`,
+      url: `https://${storage.domain}/${storage.user}/${storage.repo}`,
       ref: storage.ref,
     };
 
