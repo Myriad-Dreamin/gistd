@@ -32,7 +32,7 @@ const App = () => {
   // window.location.pathname
 
   // @ts-ignore
-  const isDev = true; // import.meta.env !== undefined;
+  const isDev = false; // import.meta.env !== undefined;
 
   const storage = (() => {
     if (isDev) {
