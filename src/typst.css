@@ -63,10 +63,6 @@
   background: #7db9dea0;
 }
 
-svg {
-  --glyph_fill: black;
-}
-
 .pseudo-link {
   fill: transparent;
   cursor: pointer;
@@ -79,6 +75,10 @@ path.outline_glyph {
   transform: matrix(1, 0, 0, 1, var(--o), 0);
 }
 
+/* svg {
+  --glyph_fill: black;
+}
+
 .outline_glyph path,
 path.outline_glyph {
   fill: var(--glyph_fill);
@@ -86,7 +86,7 @@ path.outline_glyph {
 
 .hover .typst-text {
   --glyph_fill: #66bab7;
-}
+} */
 
 .typst-jump-ripple,
 .typst-debug-react-ripple {
