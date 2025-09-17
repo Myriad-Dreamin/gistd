@@ -1,5 +1,3 @@
-// http://localhost:5173/?url=https://github.com/johanvx/typst-undergradmath/blob/main/undergradmath.typ
-
 import "./gistd.css";
 import "./typst.css";
 import "./typst.ts";
@@ -34,12 +32,11 @@ const App = () => {
   // window.location.pathname
 
   // @ts-ignore
-  const isDev = false; // import.meta.env !== undefined;
+  const isDev = true; // import.meta.env !== undefined;
 
   const storage = (() => {
     if (isDev) {
       console.log("isDev");
-      //   https://gistd.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ
       const rest = ["charged-ieee", "template", "main.typ"];
       return {
         type: "github" as const,
@@ -174,25 +171,6 @@ const App = () => {
     );
   };
 
-  const exportHtml = () => {
-    setTypstTheme(false);
-    const svgData = $typst.svg({
-      mainFilePath,
-      data_selection: { body: true, defs: true, css: true },
-    });
-    return svgData.then((svgData: string) =>
-      exportAs(
-        `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Gistd Viewer</title></head>
-<body>${svgData}</body>
-</html>
-`,
-        "text/html"
-      )
-    );
-  };
-
   DirectoryView({
     storage,
     compilerLoaded,
@@ -221,14 +199,26 @@ const App = () => {
         { class: "gistd-toolbar-row flex-row" },
         div({ class: "error", textContent: error }),
         ExportButton("Settings", () => alert("Not implemented")),
-        ExportButton("Export to PDF", exportPdf),
-        div({ style: "width: 5px" }),
-        ExportButton("HTML", exportHtml)
+        ExportButton("Export to PDF", exportPdf)
+        // div({ style: "width: 5px" }),
+        // ExportButton("HTML", exportHtml)
       )
     ),
     div(
       { class: "doc-row flex-row" },
       Doc({ darkMode, compilerLoaded, fontLoaded, typstDoc })
+    ),
+    div(
+      { class: "footer flex-row" },
+      div(
+        "Powered by ",
+        a({ href: "https://typst.app", target: "_blank" }, "Typst"),
+        " and ",
+        a(
+          { href: "https://github.com/Myriad-Dreamin/gistd", target: "_blank" },
+          "gistd."
+        )
+      )
     )
   );
 

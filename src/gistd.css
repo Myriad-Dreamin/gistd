@@ -161,3 +161,8 @@ div.error {
   display: flex;
   justify-content: center;
 }
+
+.footer {
+  justify-content: center;
+  margin-bottom: 10px;
+}
