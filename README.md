@@ -16,6 +16,8 @@ Simply replace the `github.com` with `gistd.myriad-dreamin.com`:
 https://gistd.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ
 ```
 
+If you have another link to a forgejo/gitea instance, you can simply use `https://gistd.myriad-dreamin.com/<domain>/<url>` istead of `https://gistd.myriad-dreamin.com/<url>`
+
 ## Example Documents
 
 - https://gistd.myriad-dreamin.com/johanvx/typst-undergradmath/blob/main/undergradmath.typ

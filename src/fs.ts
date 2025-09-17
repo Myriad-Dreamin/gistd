@@ -3,6 +3,8 @@ const { div, span } = van.tags;
 
 import LightningFS from "@isomorphic-git/lightning-fs";
 import { GitHttpRequest, request } from "isomorphic-git/http/web";
+import { StorageSpec } from "./storage";
+
 // @ts-ignore
 import gitModule from "https://cdn.jsdelivr.net/npm/isomorphic-git@1.24.5/+esm";
 const git: typeof import("isomorphic-git") = gitModule;
@@ -128,21 +130,11 @@ class FsState {
 }
 
 export interface DirectoryViewState {
-  storage: DirectoryViewStorage;
+  storage: StorageSpec;
   compilerLoaded: State<boolean>;
   changeFocusFile: State<FsItemState | undefined>;
   focusFile: State<FsItemState | undefined>;
   reloadBell: State<boolean>;
-}
-
-export interface DirectoryViewStorage {
-  type: "github";
-  user: string;
-  repo: string;
-  kind: string;
-  ref: string;
-  rest: string[];
-  slug: string;
 }
 
 /// The directory component
@@ -214,7 +206,7 @@ export const DirectoryView = ({
         },
       },
       dir: gitRepoDir,
-      url: `https://github.com/${storage.user}/${storage.repo}`,
+      url: `https://${storage.domain}/${storage.user}/${storage.repo}`,
       ref: storage.ref,
     };
 
