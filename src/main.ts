@@ -32,6 +32,7 @@ const App = () => {
     reloadBell = van.state(false),
     /// Creates storage spec from url
     storage = storageSpecFromUrl();
+  console.log("storage", storage);
 
   /// Styles and outputs
   const /// The source code state
@@ -45,9 +46,12 @@ const App = () => {
     /// The current focus file
     focusFile = van.state<FsItemState | undefined>(undefined);
 
-  const mainFilePath = `/repo/${storage.slug}`;
-  const url = `https://${storage.domain}/${window.location.pathname}`;
-  console.log("storage", storage);
+  /// Storage spec
+  const mainFilePath = storage.mainFilePath(),
+    url = storage.originUrl(),
+    fileName = storage.fileName(),
+    description = storage.description(),
+    removeExtension = fileName.replace(/\.typ$/, "");
 
   /// Checks compiler status
   window.$typst$script.then(async () => {
@@ -106,11 +110,6 @@ const App = () => {
     }
   });
 
-  // get last part of the path
-  const lastPart =
-    storage.rest.length > 0 ? storage.rest[storage.rest.length - 1] : "main";
-  const removeExtension = lastPart.replace(/\.typ$/, "");
-
   const exportAs = (data: string | Uint8Array, mime: string) => {
     var fileBlob = new Blob([data as any], { type: mime });
 
@@ -164,7 +163,7 @@ const App = () => {
           style:
             "display: flex; align-items: center; text-align: center; text-decoration: underline; padding-left: 10px",
         },
-        "GitHub: " + storage.user + "/" + storage.repo + " " + lastPart
+        description
       ),
       div(
         { class: "gistd-toolbar-row flex-row" },
