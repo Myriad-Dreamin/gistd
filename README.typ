@@ -2,12 +2,9 @@
 
 #let forest = green.darken(20%)
 #let is-markdown = sys.inputs.at("x-target", default: "pdf") == "md"
-#show "github.com": text.with(forest)
-#show "codeberg.org": text.with(forest)
+#show regex("github.com|codeberg.org"): text.with(forest)
 #show "gistd.myriad-dreamin.com": text.with(eastern)
-#show "any-gistd.myriad-dreamin.com": text.with(red)
-#show "@any": text.with(red)
-#show "@http": text.with(red)
+#show regex("any-gistd.myriad-dreamin.com|@(?:any|http)"): text.with(red)
 #show link: text.with(blue)
 #show link: underline
 
