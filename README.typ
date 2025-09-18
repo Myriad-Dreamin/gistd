@@ -7,6 +7,7 @@
 #show "gistd.myriad-dreamin.com": text.with(eastern)
 #show "any-gistd.myriad-dreamin.com": text.with(red)
 #show "@any": text.with(red)
+#show "@http": text.with(red)
 #show link: text.with(blue)
 #show link: underline
 
@@ -86,7 +87,7 @@ For example, to load a document at `http://localhost:11449/main.typ`:
 
 = Loading a document with HTTP protocol
 
-For example, to load a document at `http://localhost:11449/main.typ`:
+`@any` infers protocol from the URL, while you could use `@http` to force HTTP protocol. For example, to load a document at `http://localhost:11449/main.typ`:
 
 - https://gistd.myriad-dreamin.com/@http/localhost:11449/main.typ?g-cors=false
 
