@@ -37,14 +37,13 @@ Put `any-gistd.myriad-dreamin.com` before the link:
 https://any-gistd.myriad-dreamin.com/github.com/typst/templates/blob/main/charged-ieee/template/main.typ
 ```
 
-If a domain is specially identified, gistd will use corresponding approach to serve the document.
+`any-gistd.myriad-dreamin.com` is alias for `gistd.myriad-dreamin.com/@any`.
+
+If a domain (host) is specially identified, gistd will use corresponding approach to serve the document.
 
 - `github.com`: git protocol.
 - `codeberg.org`: git protocol.
-
-Note: gistd won't load other files on the specified domain if it cannot identifies the domain, i.e. the typst document cannot load other resources relative to the domain.
-
-`any-gistd.myriad-dreamin.com` is alias for `gistd.myriad-dreamin.com/@any`.
+- `localhost` and others: HTTP protocol if host is `localhost` otherwise https protocol. Note: gistd won't load other files on the specified domain if it cannot identifies the domain, i.e. the typst document cannot load other resources relative to the domain.
 
 Example Documents:
 
@@ -53,7 +52,7 @@ Example Documents:
 
 ## Loading a document without cors proxy
 
-By default, gistd uses a trusted cors proxy to load documents. This is because GitHub and Forgejo doesn't allow gistd to load documents. See [isomorphic-git: Quickstart](https://isomorphic-git.org/docs/en/quickstart) for more details.
+By default, gistd uses a trusted cors proxy (`https://underleaf.mgt.workers.dev`) to load documents. This is because GitHub and Forgejo doesn't allow gistd to load documents. See [isomorphic-git: Quickstart](https://isomorphic-git.org/docs/en/quickstart) for more details.
 
 However, you may want to load a document without cors proxy. You can do this by adding `g-cors=false` to the query string.
 
