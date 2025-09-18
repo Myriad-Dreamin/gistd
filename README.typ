@@ -48,7 +48,7 @@ Example Documents:
 - https://gistd.myriad-dreamin.com/Jollywatt/typst-fletcher/blob/main/docs/manual.typ
 - https://gistd.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ
 
-= Loading a single-file document by arbitrary links
+= Loading a document by arbitrary links
 
 Assuming that you have arbitrary link, for example:
 
