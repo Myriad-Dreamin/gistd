@@ -1,0 +1,35 @@
+networks:
+  forgejo:
+    external: false
+
+services:
+  server:
+    image: codeberg.org/forgejo/forgejo:12
+    container_name: forgejo
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    restart: always
+    networks:
+      - forgejo
+    volumes:
+      - ./.forgejo:/data:Z
+    ports:
+      - "127.0.0.1:3000:3000"
+  # sample document URL: my-gistd.com/@any/localhost:3000/jan/test/src/branch/main/test.typ?g-cors=http://localhost:9999
+  # https://github.com/isomorphic-git/cors-proxy/issues/19
+  # reads http://localhost:9999/ for more details
+  cors-proxy:
+    image: node:lts-alpine
+    container_name: cors-proxy
+    environment:
+      - INSECURE_HTTP_ORIGINS=localhost:3000
+    command:
+      - npx
+      - -y
+      - --package=micro@9.3.3
+      - --package=@isomorphic-git/cors-proxy
+      - cors-proxy
+      - start
+    ports:
+      - "127.0.0.1:9999:9999"

@@ -281,12 +281,12 @@ async function loadFromGit(
     fs,
     http: {
       request(h: GitHttpRequest) {
-        h.url = `https://underleaf.mgt.workers.dev/?${h.url}`;
+        h.url = storage.corsUrl(h.url);
         return request(h);
       },
     },
     dir: "/repo",
-    url: `https://${spec.domain}/${spec.user}/${spec.repo}`,
+    url: storage.remoteUrl(),
     ref: spec.ref,
   };
 

@@ -29,8 +29,11 @@ export type StorageSpec =
   | ForgejoStorageSpec
   | HttpStorageSpec;
 
+type CorsOption = string | boolean;
+
 export interface GitHubStorageSpec {
   type: "github";
+  protocol: string;
   domain: string;
   user: string;
   repo: string;
@@ -38,31 +41,36 @@ export interface GitHubStorageSpec {
   ref: string;
   rest: string[];
   slug: string;
+  cors: CorsOption;
 }
 
 export interface HttpStorageSpec {
   type: "http";
   url: string;
-  cors: boolean;
+  cors: CorsOption;
 }
 
 export interface ForgejoStorageSpec {
   type: "forgejo";
+  protocol: string;
   domain: string;
   user: string;
   repo: string;
   ref: string;
   rest: string[];
   slug: string;
+  cors: CorsOption;
 }
 
 // @ts-ignore
 const isDev = false; // import.meta.env !== undefined;
 // const TEST_PATH = "typst/templates/blob/main/charged-ieee/template/main.typ";
 // const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";
-const TEST_PATH = "@http/localhost:11449/localhost.typ";
+// const TEST_PATH = "@http/localhost:11449/localhost.typ";
+const TEST_PATH = "@any/localhost:3000/jan/test/src/branch/main/test.typ";
 const README: GitHubStorageSpec = {
   type: "github" as const,
+  protocol: "https",
   domain: "github.com",
   user: "Myriad-Dreamin",
   repo: "gistd",
@@ -70,6 +78,7 @@ const README: GitHubStorageSpec = {
   ref: "main",
   rest: ["README.typ"],
   slug: "README.typ",
+  cors: true,
 };
 
 export function storageSpecFromUrl(): StorageSpecExt {
@@ -96,9 +105,25 @@ export function storageSpecFromPath(
   helpSpec: StorageSpec = README
 ): StorageSpec {
   const [prefix, ...__] = inputPath.split("/");
+  const searchParams = new URLSearchParams(search || "");
+  const originCors = searchParams.get("g-cors");
+  const getCors = (protocol: string) => {
+    if (originCors && originCors !== "false" && originCors !== "true") {
+      return originCors;
+    }
+
+    return protocol == "https" ? originCors !== "false" : originCors === "true";
+  };
+  searchParams.delete("g-cors");
 
   if (prefix === "@any" || prefix === "@http") {
     const [domain, ...segments] = inputPath.split("/").slice(1);
+    const protocol =
+      prefix === "@http"
+        ? "http"
+        : /^(?:(localhost|127\.\d+\.\d+\.\d+)(?:$|:))/.test(domain)
+        ? "http"
+        : "https";
 
     if (domain === "github.com" && segments[2] !== "raw") {
       const [user, repo, kind, ref, ...rest] = segments;
@@ -107,6 +132,7 @@ export function storageSpecFromPath(
       }
       return {
         type: "github",
+        protocol: "https",
         domain: "github.com",
         user,
         repo,
@@ -114,6 +140,7 @@ export function storageSpecFromPath(
         ref,
         rest,
         slug: rest.join("/"),
+        cors: getCors("https"),
       };
       // todo: why we need to check segments[2]?
     } else if (domain === "codeberg.org" || segments[2] === "src") {
@@ -124,29 +151,22 @@ export function storageSpecFromPath(
 
       return {
         type: "forgejo",
+        protocol,
         domain,
         user,
         repo,
         ref,
         rest,
         slug: rest.join("/"),
+        cors: getCors(protocol),
       };
     }
-
-    const protocol = prefix === "@http" ? "http" : "https";
-    const searchParams = new URLSearchParams(search || "");
-    const cors =
-      protocol == "https"
-        ? searchParams.get("g-cors") !== "false"
-        : searchParams.get("g-cors") === "true";
-    searchParams.delete("g-cors");
-    console.log(search, "cors", cors);
 
     const [_any2, ...rest2] = inputPath.split("/");
     const url = new URL(protocol + "://" + rest2.join("/"));
     url.search = search || "";
 
-    return { type: "http", url: url.toString(), cors };
+    return { type: "http", url: url.toString(), cors: getCors(protocol) };
   } else {
     const [user, repo, kind, ref, ...rest] = inputPath.split("/");
     if (!ref) {
@@ -154,6 +174,7 @@ export function storageSpecFromPath(
     }
     return {
       type: "github",
+      protocol: "https",
       domain: "github.com",
       user,
       repo,
@@ -161,6 +182,7 @@ export function storageSpecFromPath(
       ref,
       rest,
       slug: rest.join("/"),
+      cors: getCors("https"),
     };
   }
 }
@@ -180,7 +202,15 @@ export class GitHubStorageSpecExt {
   }
 
   originUrl() {
-    return `https://${this.spec.domain}/${this.spec.user}/${this.spec.repo}/${this.spec.kind}/${this.spec.ref}/${this.spec.slug}`;
+    return `${this.spec.protocol}://${this.spec.domain}/${this.spec.user}/${this.spec.repo}/${this.spec.kind}/${this.spec.ref}/${this.spec.slug}`;
+  }
+
+  remoteUrl() {
+    return `${this.spec.protocol}://${this.spec.domain}/${this.spec.user}/${this.spec.repo}`;
+  }
+
+  corsUrl(url: string) {
+    return corsUrl(url, this.spec.cors);
   }
 
   description() {
@@ -204,7 +234,15 @@ export class ForgejoStorageSpecExt {
   }
 
   originUrl() {
-    return `https://${this.spec.domain}/${this.spec.user}/${this.spec.repo}/src/${this.spec.ref}/${this.spec.slug}`;
+    return `${this.spec.protocol}://${this.spec.domain}/${this.spec.user}/${this.spec.repo}/src/${this.spec.ref}/${this.spec.slug}`;
+  }
+
+  remoteUrl() {
+    return `${this.spec.protocol}://${this.spec.domain}/${this.spec.user}/${this.spec.repo}`;
+  }
+
+  corsUrl(url: string) {
+    return corsUrl(url, this.spec.cors);
   }
 
   description() {
@@ -232,10 +270,8 @@ export class HttpStorageSpecExt {
   }
 
   fetchUrl() {
-    console.log("fetchUrl", this.spec.cors, this.spec.url);
-    return this.spec.cors
-      ? `https://underleaf.mgt.workers.dev/?${this.spec.url}`
-      : this.spec.url;
+    // console.log("fetchUrl", this.spec.cors, this.spec.url);
+    return corsUrl(this.spec.url, this.spec.cors);
   }
 
   description() {
@@ -244,5 +280,16 @@ export class HttpStorageSpecExt {
 
   fileName() {
     return this.spec.url.split("/").pop() || "main.typ";
+  }
+}
+
+export function corsUrl(url: string, cors: CorsOption) {
+  if (cors === true) {
+    return `https://underleaf.mgt.workers.dev/?${url}`;
+  } else if (cors === false) {
+    return url;
+  } else {
+    // See: scripts/test-forgejo.yml
+    return `${cors}/${url.replace(/^https?:\/\//, "")}`;
   }
 }
