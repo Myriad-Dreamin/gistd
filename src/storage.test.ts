@@ -4,8 +4,10 @@ import { createStorageSpecExt, storageSpecFromPath } from "./storage";
 test("redirect to README", () => {
   expect(storageSpecFromPath("")).toMatchInlineSnapshot(`
     {
+      "cors": true,
       "domain": "github.com",
       "kind": "blob",
+      "protocol": "https",
       "ref": "main",
       "repo": "gistd",
       "rest": [
@@ -18,8 +20,10 @@ test("redirect to README", () => {
   `);
   expect(storageSpecFromPath("README.typ")).toMatchInlineSnapshot(`
     {
+      "cors": true,
       "domain": "github.com",
       "kind": "blob",
+      "protocol": "https",
       "ref": "main",
       "repo": "gistd",
       "rest": [
@@ -58,8 +62,10 @@ test("@any for raw", () => {
     )
   ).toMatchInlineSnapshot(`
     {
+      "cors": true,
       "domain": "github.com",
       "kind": "blob",
+      "protocol": "https",
       "ref": "main",
       "repo": "gistd",
       "rest": [
@@ -79,7 +85,9 @@ test("@any for forgejo", () => {
     )
   ).toMatchInlineSnapshot(`
     {
+      "cors": true,
       "domain": "codeberg.org",
+      "protocol": "https",
       "ref": "main",
       "repo": "templates",
       "rest": [
