@@ -4,7 +4,7 @@ import { storageSpecFromPath } from "./storage";
 test("redirect to README", () => {
   expect(storageSpecFromPath("")).toMatchInlineSnapshot(`
     {
-      "domain": "https://github.com",
+      "domain": "github.com",
       "kind": "blob",
       "ref": "main",
       "repo": "gistd",
@@ -18,7 +18,47 @@ test("redirect to README", () => {
   `);
   expect(storageSpecFromPath("README.typ")).toMatchInlineSnapshot(`
     {
-      "domain": "https://github.com",
+      "domain": "github.com",
+      "kind": "blob",
+      "ref": "main",
+      "repo": "gistd",
+      "rest": [
+        "README.typ",
+      ],
+      "slug": "README.typ",
+      "type": "github",
+      "user": "Myriad-Dreamin",
+    }
+  `);
+});
+
+test("@any for raw", () => {
+  expect(storageSpecFromPath("@http/localhost:11449/main.typ", "g-cors=false"))
+    .toMatchInlineSnapshot(`
+      {
+        "cors": false,
+        "type": "http",
+        "url": "http://localhost:11449/main.typ?g-cors=false",
+      }
+    `);
+  expect(
+    storageSpecFromPath(
+      "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ"
+    )
+  ).toMatchInlineSnapshot(`
+    {
+      "cors": true,
+      "type": "http",
+      "url": "https://github.com/Myriad-Dreamin/gistd/raw/main/README.typ",
+    }
+  `);
+  expect(
+    storageSpecFromPath(
+      "@any/github.com/Myriad-Dreamin/gistd/blob/main/README.typ"
+    )
+  ).toMatchInlineSnapshot(`
+    {
+      "domain": "github.com",
       "kind": "blob",
       "ref": "main",
       "repo": "gistd",

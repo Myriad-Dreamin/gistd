@@ -3,7 +3,11 @@ const { div, span } = van.tags;
 
 import LightningFS from "@isomorphic-git/lightning-fs";
 import { GitHttpRequest, request } from "isomorphic-git/http/web";
-import { StorageSpec } from "./storage";
+import {
+  GitHubStorageSpecExt,
+  ForgejoStorageSpecExt,
+  StorageSpecExt,
+} from "./storage";
 
 // @ts-ignore
 import gitModule from "https://cdn.jsdelivr.net/npm/isomorphic-git@1.24.5/+esm";
@@ -130,7 +134,7 @@ class FsState {
 }
 
 export interface DirectoryViewState {
-  storage: StorageSpec;
+  storage: StorageSpecExt;
   compilerLoaded: State<boolean>;
   changeFocusFile: State<FsItemState | undefined>;
   focusFile: State<FsItemState | undefined>;
@@ -146,14 +150,12 @@ export const DirectoryView = ({
   reloadBell,
 }: DirectoryViewState) => {
   /// Capture compiler load status
-  const remoteGitFsLoaded = van.state(false);
+  const remoteFsLoaded = van.state(false);
   const localStorageLoaded = van.state(false);
   const loaded = van.state(false);
   const fsState = van.state<FsState | undefined>(undefined);
 
   /// Internal fields
-  const fs = new LightningFS("fs", { wipe: true, db: undefined! });
-  const gitRepoDir = "/repo";
   const projectDir = "/repo";
 
   /// Store localstorage data whenver fs state changes
@@ -169,10 +171,9 @@ export const DirectoryView = ({
       })
     );
 
-    focusFile.val = state.fsList.find(
-      (t) => t.path === `/repo/${storage.slug}`
-    );
-    console.log("focusFile", state.fsList);
+    const mainFilePath = storage.mainFilePath();
+    focusFile.val = state.fsList.find((t) => t.path === mainFilePath);
+    // console.log("found?", focusFile.val, "focusFile", state.fsList);
     changeFocusFile.val = focusFile.val?.clone();
   };
 
@@ -196,61 +197,51 @@ export const DirectoryView = ({
   });
 
   /// Task: load remote data to fs
-  (async () => {
-    const g = {
-      fs,
-      http: {
-        request(h: GitHttpRequest) {
-          h.url = `https://underleaf.mgt.workers.dev/?${h.url}`;
-          return request(h);
-        },
-      },
-      dir: gitRepoDir,
-      url: `https://${storage.domain}/${storage.user}/${storage.repo}`,
-      ref: storage.ref,
-    };
+  switch (storage.type) {
+    case "github":
+    /* fallthrough */
+    case "forgejo": {
+      const fs = new LightningFS("fs", { wipe: true, db: undefined! });
 
-    try {
-      await fs.promises.readFile("/repo/.git/config");
-      await git.fetch(g);
-    } catch (e) {
-      await git.clone(g);
-    }
-    await git.setConfig({ ...g, path: "user.name", value: "gistd" });
-    await git.setConfig({ ...g, path: "user.email", value: "me@gistd.com" });
-    await git.checkout({ ...g, force: true });
-    remoteGitFsLoaded.val = true;
-  })();
-  van.derive(async () => {
-    if (
-      loaded.val ||
-      !(compilerLoaded.val && remoteGitFsLoaded.val && fsState.val)
-    ) {
-      return;
-    }
-    loaded.val = true;
-
-    console.log("start to load fs to compiler");
-
-    async function addPath(path: string) {
-      // read type
-      const type = await fs.promises.stat(path);
-      if (type.isDirectory()) {
-        for (const fileName of await fs.promises.readdir(path)) {
-          await addPath(dirJoin(path, fileName));
+      loadFromGit(storage, fs).then(() => {
+        remoteFsLoaded.val = true;
+      });
+      intoCompiler(async () => {
+        async function addPath(path: string) {
+          // read type
+          const type = await fs.promises.stat(path);
+          if (type.isDirectory()) {
+            for (const fileName of await fs.promises.readdir(path)) {
+              await addPath(dirJoin(path, fileName));
+            }
+          } else {
+            const data = await fs.promises.readFile(path);
+            fsState.val = fsState.val!.add(path, data);
+          }
         }
-      } else {
-        const data = await fs.promises.readFile(path);
-        fsState.val = fsState.val!.add(path, data);
-      }
+
+        await addPath(projectDir);
+      });
+      break;
     }
+    case "http": {
+      const dataPromise = fetch(storage.fetchUrl())
+        .then((res) => res.arrayBuffer())
+        .then((buffer) => {
+          remoteFsLoaded.val = true;
+          return new Uint8Array(buffer);
+        });
 
-    await addPath(projectDir);
+      intoCompiler(async () => {
+        const mainFilePath = storage.mainFilePath();
+        const data = await dataPromise;
 
-    reloadAll(fsState.val);
-    console.log("git fs done");
-    reloadBell.val = true;
-  });
+        fsState.val = fsState.val!.add(mainFilePath, data);
+      });
+
+      break;
+    }
+  }
 
   return div(
     {
@@ -259,4 +250,53 @@ export const DirectoryView = ({
     (_dom?: Element) =>
       div(fsState.val?.fsList.map((t) => FsItem(projectDir + "/", t)) || [])
   );
+
+  async function intoCompiler(loader: () => Promise<void>) {
+    return van.derive(async () => {
+      if (
+        loaded.val ||
+        !(compilerLoaded.val && remoteFsLoaded.val && fsState.val)
+      ) {
+        return;
+      }
+
+      console.log("start to load fs to compiler");
+      loaded.val = true;
+      await loader();
+
+      reloadAll(fsState.val);
+      console.log("read fs done");
+      reloadBell.val = true;
+    });
+  }
 };
+
+async function loadFromGit(
+  storage: GitHubStorageSpecExt | ForgejoStorageSpecExt,
+  fs: LightningFS
+) {
+  const spec = storage.spec;
+
+  const g = {
+    fs,
+    http: {
+      request(h: GitHttpRequest) {
+        h.url = `https://underleaf.mgt.workers.dev/?${h.url}`;
+        return request(h);
+      },
+    },
+    dir: "/repo",
+    url: `https://${spec.domain}/${spec.user}/${spec.repo}`,
+    ref: spec.ref,
+  };
+
+  try {
+    await fs.promises.readFile("/repo/.git/config");
+    await git.fetch(g);
+  } catch (e) {
+    await git.clone(g);
+  }
+  await git.setConfig({ ...g, path: "user.name", value: "gistd" });
+  await git.setConfig({ ...g, path: "user.email", value: "me@gistd.com" });
+  await git.checkout({ ...g, force: true });
+}
