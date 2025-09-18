@@ -7,6 +7,7 @@
 #show regex("any-gistd.myriad-dreamin.com|@(?:any|http)"): text.with(red)
 #show link: text.with(blue)
 #show link: underline
+#set par(justify: true) if not is-markdown
 
 #let verbatim(body) = {
   show raw.where(lang: "verbatim"): it => html.elem("m1verbatim", attrs: (src: it.text))
