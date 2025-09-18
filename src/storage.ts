@@ -74,12 +74,12 @@ const README: GitHubStorageSpec = {
 
 export function storageSpecFromUrl(): StorageSpecExt {
   const inputPath = window.location.pathname.slice(1) || "";
-
-  const spec = storageSpecFromPath(
-    isDev ? TEST_PATH : inputPath,
-    window.location.search
+  return createStorageSpecExt(
+    storageSpecFromPath(isDev ? TEST_PATH : inputPath, window.location.search)
   );
+}
 
+export function createStorageSpecExt(spec: StorageSpec): StorageSpecExt {
   switch (spec.type) {
     case "github":
       return new GitHubStorageSpecExt(spec);
@@ -180,7 +180,7 @@ export class GitHubStorageSpecExt {
   }
 
   originUrl() {
-    return `${this.spec.domain}/${this.spec.user}/${this.spec.repo}/${this.spec.kind}/${this.spec.ref}/${this.spec.slug}`;
+    return `https://${this.spec.domain}/${this.spec.user}/${this.spec.repo}/${this.spec.kind}/${this.spec.ref}/${this.spec.slug}`;
   }
 
   description() {
@@ -204,7 +204,7 @@ export class ForgejoStorageSpecExt {
   }
 
   originUrl() {
-    return `${this.spec.domain}/${this.spec.user}/${this.spec.repo}/src/${this.spec.ref}/${this.spec.slug}`;
+    return `https://${this.spec.domain}/${this.spec.user}/${this.spec.repo}/src/${this.spec.ref}/${this.spec.slug}`;
   }
 
   description() {

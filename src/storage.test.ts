@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { storageSpecFromPath } from "./storage";
+import { createStorageSpecExt, storageSpecFromPath } from "./storage";
 
 test("redirect to README", () => {
   expect(storageSpecFromPath("")).toMatchInlineSnapshot(`
@@ -90,4 +90,21 @@ test("@any for forgejo", () => {
       "user": "typst",
     }
   `);
+});
+
+test("originUrl", () => {
+  const test = (it: string) =>
+    createStorageSpecExt(storageSpecFromPath(it)).originUrl();
+  expect(test("Myriad-Dreamin/gistd/blob/main/README.typ")).toBe(
+    "https://github.com/Myriad-Dreamin/gistd/blob/main/README.typ"
+  );
+  expect(test("@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ")).toBe(
+    "https://github.com/Myriad-Dreamin/gistd/raw/main/README.typ"
+  );
+  expect(
+    test("@any/codeberg.org/typst/templates/src/unused/main/main.typ")
+  ).toBe("https://codeberg.org/typst/templates/src/main/main.typ");
+  expect(test("@http/localhost:11449/localhost.typ")).toBe(
+    "http://localhost:11449/localhost.typ"
+  );
 });
