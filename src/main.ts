@@ -199,14 +199,6 @@ const App = () => {
 
   // slide mode key bindings
   if (mode === "slide") {
-    // on click
-    window.addEventListener("click", (e) => {
-      //  if inside #gistd-doc
-      if (e.target instanceof HTMLElement && e.target.closest("#gistd-doc")) {
-        page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
-      }
-    });
-
     const detectFullScreen = () => {
       if (window.matchMedia("(display-mode: fullscreen)").matches) {
         inFullScreen.val = true;
@@ -223,6 +215,18 @@ const App = () => {
     };
     document.addEventListener("fullscreenchange", detectFullScreen);
     detectFullScreen();
+    // on click
+    window.addEventListener("click", (e) => {
+      // if in full screen
+      if (!inFullScreen.val) {
+        return;
+      }
+
+      //  if inside #gistd-doc
+      if (e.target instanceof HTMLElement && e.target.closest("#gistd-doc")) {
+        page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
+      }
+    });
     // full screen and wheel down
     window.addEventListener("wheel", (e) => {
       // if in full screen
