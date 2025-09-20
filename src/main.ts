@@ -137,6 +137,8 @@ const App = () => {
     .matchMedia?.("(prefers-color-scheme: dark)")
     .addEventListener("change", (event) => (darkMode.val = event.matches));
 
+  history.pushState({}, window.location.pathname);
+
   /// Triggers compilation when precondition is met or changed
   van.derive(async () => {
     try {

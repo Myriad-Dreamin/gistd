@@ -56,6 +56,16 @@ These URL parameters can change the behavior of gistd.
   - `doc`: View the document in the document mode.
   - `slide`: View the document in the slide mode.
 
+== Slide View
+
+Using `g-mode=slide` mentioned above to view the document in the slide mode:
+
+Example Documents:
+
+- #link(
+    "https://gistd.myriad-dreamin.com/touying-typ/touying/blob/main/examples/simple.typ?g-mode=slide",
+  )[A simple touying side.]
+
 = Loading a document by arbitrary links
 
 Assuming that you have arbitrary link, for example:
