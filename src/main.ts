@@ -24,6 +24,24 @@ const ExportButton = (title: string, onclick: () => void) =>
     textContent: title,
   });
 
+const fullScreenButton = (mode: "slide" | "doc") => {
+  if (mode === "slide") {
+    return [
+      button({
+        onclick: () => {
+          if (document.fullscreenElement) {
+            document.exitFullscreen();
+          } else {
+            document.documentElement.requestFullscreen();
+          }
+        },
+        textContent: "Full Screen",
+      }),
+    ];
+  }
+  return [];
+};
+
 const pageControls = ({
   page,
   maxPage,
@@ -73,6 +91,11 @@ const App = () => {
     mode,
   } = specFromUrl();
   console.log("storage", storage, "page", initialPage, "mode", mode);
+  if (mode === "slide") {
+    document.documentElement.dataset.mode = "slide";
+  } else {
+    document.documentElement.dataset.mode = "doc";
+  }
 
   /// Styles and outputs
   const /// The source code state
@@ -85,6 +108,8 @@ const App = () => {
     changeFocusFile = van.state<FsItemState | undefined>(undefined),
     /// The current focus file
     focusFile = van.state<FsItemState | undefined>(undefined),
+    /// Whether in full screen
+    inFullScreen = van.state(false),
     /// The current page
     page = van.state(initialPage),
     /// The maximum page
@@ -157,6 +182,62 @@ const App = () => {
     }
   });
 
+  // slide mode key bindings
+  if (mode === "slide") {
+    // on click
+    window.addEventListener("click", (e) => {
+      //  if inside #gistd-doc
+      if (e.target instanceof HTMLElement && e.target.closest("#gistd-doc")) {
+        page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
+      }
+    });
+
+    const detectFullScreen = () => {
+      if (window.matchMedia("(display-mode: fullscreen)").matches) {
+        inFullScreen.val = true;
+      } else {
+        inFullScreen.val = false;
+      }
+
+      console.log("detectFullScreen", inFullScreen.val);
+      if (inFullScreen.val) {
+        document.documentElement.dataset.fullscreen = "";
+      } else {
+        delete document.documentElement.dataset.fullscreen;
+      }
+    };
+    document.addEventListener("fullscreenchange", detectFullScreen);
+    detectFullScreen();
+    // full screen and wheel down
+    window.addEventListener("wheel", (e) => {
+      // if in full screen
+      if (!inFullScreen.val) {
+        return;
+      }
+
+      if (e.deltaY > 0) {
+        page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
+      } else if (e.deltaY < 0) {
+        page.val = Math.max(Math.min(page.val - 1, maxPage.val), 1);
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
+        page.val = Math.max(Math.min(page.val - 1, maxPage.val), 1);
+      }
+      if (e.key === "ArrowRight") {
+        page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
+      }
+      if (e.key === "ArrowUp") {
+        page.val = Math.max(Math.min(page.val - 1, maxPage.val), 1);
+      }
+      if (e.key === "ArrowDown") {
+        page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
+      }
+    });
+  }
+
   const exportAs = (data: string | Uint8Array | undefined, mime: string) => {
     if (!data) {
       return;
@@ -203,7 +284,7 @@ const App = () => {
     { class: "gistd-main flex-column" },
     div(
       {
-        class: "flex-row",
+        class: "header flex-row",
         style: "justify-content: space-between; margin-bottom: 10px",
       },
       a(
@@ -219,6 +300,7 @@ const App = () => {
         { class: "gistd-toolbar-row flex-row" },
         ErrorPanel({ error }),
         // prev, next
+        ...fullScreenButton(mode),
         ...pageControls({ page, maxPage, mode }),
 
         ExportButton("Settings", () => alert("Not implemented")),
@@ -230,6 +312,7 @@ const App = () => {
     div(
       { class: "doc-row flex-row" },
       Doc({
+        inFullScreen,
         maxPage,
         page,
         mode,

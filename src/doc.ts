@@ -34,6 +34,7 @@ export class TypstDocument {
 
 export interface DocState {
   maxPage?: State<number>;
+  inFullScreen?: State<boolean>;
   page?: State<number>;
   mode?: "slide" | "doc";
   darkMode: State<boolean>;
@@ -44,6 +45,7 @@ export interface DocState {
 
 /// The document component
 export const Doc = ({
+  inFullScreen,
   maxPage,
   page,
   mode,
@@ -91,13 +93,14 @@ export const Doc = ({
     );
 
     doc.doc = await renderDom(doc.plugin, {
+      inFullScreen,
       maxPage,
       page: page?.val || 0,
       mode,
       renderSession: doc.kModule,
       container: doc.elem,
       pixelPerPt: 4.5,
-      domScale: 1,
+      domScale: 1.5,
     });
     van.derive(() => {
       console.log("setPartialPageNumber", page?.val || 0);
@@ -146,4 +149,5 @@ interface RenderDomOptions
   extends RenderInSessionOptions<MountDomOptions>,
     UserRenderDomOptions {
   maxPage?: State<number>;
+  inFullScreen?: State<boolean>;
 }

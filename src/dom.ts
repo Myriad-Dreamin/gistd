@@ -11,7 +11,7 @@ import {
   provideDoc,
 } from "@myriaddreamin/typst.ts/contrib/dom/typst-doc";
 import { TypstCancellationToken } from "@myriaddreamin/typst.ts/contrib/dom/typst-cancel";
-import { State } from "vanjs-core";
+import van, { State } from "vanjs-core";
 import { PreviewMode } from "@myriaddreamin/typst.ts/dist/esm/contrib/dom/typst-doc.mjs";
 
 const animationFrame = () =>
@@ -40,6 +40,7 @@ export interface ITypstDomDocument {
 
 export interface InitDomDocArgs {
   maxPage?: State<number>;
+  inFullScreen?: State<boolean>;
   page?: number;
   mode?: "slide" | "doc";
   renderer: TypstRenderer;
@@ -79,6 +80,8 @@ export function provideDomDoc<
     current_task?: RenderTask = undefined;
     /// The maximum page.
     maxPage?: State<number>;
+    /// Whether the document is in fullscreen.
+    inFullScreen?: State<boolean>;
     constructor(...args: any[]) {
       super(...args);
       this.registerMode("dom");
@@ -97,12 +100,15 @@ export function provideDomDoc<
         0
       );
       this.maxPage = this.opts.maxPage;
+      this.inFullScreen = this.opts.inFullScreen;
       this.previewMode =
         this.opts.mode === "slide"
           ? PreviewMode.Slide
           : this.opts.mode === "doc"
           ? PreviewMode.Doc
           : PreviewMode.Doc;
+
+      van.derive(() => this.updateFullscreen());
     }
 
     dispose() {
@@ -211,7 +217,42 @@ export function provideDomDoc<
       }
     }
 
-    // fast mode
+    updateFullscreen() {
+      const inFullScreenVal = this.inFullScreen?.val;
+      const pageVal = this.maxPage?.val || 0;
+
+      if (!inFullScreenVal) {
+        return;
+      }
+
+      const pages = this.retrieveDOMPages();
+      const selectedPage = pages[this.partialRenderPage] || pages[0];
+
+      if (!selectedPage) {
+        return;
+      }
+
+      console.log(
+        "updateFullscreen reset dom scale",
+        pageVal,
+        inFullScreenVal,
+        this.hookedElem,
+        selectedPage
+      );
+
+      // dataset.width and dataset.height
+      const widthStr = selectedPage.dataset.width;
+      const heightStr = selectedPage.dataset.height;
+      const width = Number.parseFloat(widthStr!);
+      const height = Number.parseFloat(heightStr!);
+
+      // min: full width / width, full height / height
+      this.hookedElem.style.setProperty(
+        "--typst-dom-scale",
+        `calc(min(100vw / ${width}px, 100vh / ${height}px))`
+      );
+    }
+
     prevRenderPage?: number = undefined;
     async rerender$dom() {
       const domState = this.retrieveDOMState();
@@ -234,12 +275,13 @@ export function provideDomDoc<
     }
 
     async doRender$dom(ctx: TypstCancellationToken) {
-      console.log(
-        "doRender$dom slide",
-        this.previewMode,
-        this.partialRenderPage,
-        this.prevRenderPage
-      );
+      if (this.previewMode === PreviewMode.Slide) {
+        console.log(
+          "doRender$dom slide",
+          this.partialRenderPage,
+          this.prevRenderPage
+        );
+      }
 
       const condOrExit = <T>(needFrame: boolean, cb: () => Promise<T>) => {
         if (needFrame && !ctx.isCancelRequested() && cb) {
@@ -345,6 +387,7 @@ export function provideDomDoc<
       if (ctx.isCancelRequested()) {
         return;
       }
+      this.updateFullscreen();
       this.prevRenderPage = this.partialRenderPage;
       console.log("finished", RepaintStage.Layout);
     }

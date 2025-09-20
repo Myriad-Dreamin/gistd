@@ -6,6 +6,7 @@ import {
 
 // @ts-ignore
 const isDev = false; // import.meta.env !== undefined;
+const DEFAULT_DEV_MODE = "slide";
 // const TEST_PATH = "typst/templates/blob/main/charged-ieee/template/main.typ";
 // const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";
 // const TEST_PATH = "@http/localhost:11449/localhost.typ";
@@ -14,7 +15,8 @@ const TEST_PATH = "touying-typ/touying/blob/main/examples/simple.typ";
 // const TEST_PATH = "Jollywatt/typst-fletcher/blob/main/docs/manual.typ";
 
 const DEFAULT_PAGE = "1";
-const DEFAULT_MODE = "doc";
+// const DEFAULT_MODE = "doc";
+const DEFAULT_MODE = isDev ? DEFAULT_DEV_MODE : "doc";
 
 export interface Spec {
   storage: StorageSpecExt;

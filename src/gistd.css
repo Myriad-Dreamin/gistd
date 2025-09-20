@@ -166,3 +166,25 @@ div.error {
   justify-content: center;
   margin-bottom: 10px;
 }
+
+
+:root[data-mode="slide"][data-fullscreen] #app, 
+:root[data-mode="slide"][data-fullscreen] .doc-row, 
+:root[data-mode="slide"][data-fullscreen] .gistd-main, 
+:root[data-mode="slide"][data-fullscreen] #gistd-doc {
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  height: 100%;
+  width: 100%;
+}
+:root[data-mode="slide"][data-fullscreen] .typst-dom-page {
+  margin: 0;
+}
+
+:fullscreen .header {
+  display: none;
+}
+:fullscreen .footer {
+  display: none;
+}
