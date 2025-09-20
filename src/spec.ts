@@ -5,7 +5,7 @@ import {
 } from "./storage";
 
 // @ts-ignore
-const isDev = true; // import.meta.env !== undefined;
+const isDev = false; // import.meta.env !== undefined;
 // const TEST_PATH = "typst/templates/blob/main/charged-ieee/template/main.typ";
 // const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";
 // const TEST_PATH = "@http/localhost:11449/localhost.typ";
