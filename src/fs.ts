@@ -156,7 +156,7 @@ export const DirectoryView = ({
   const fsState = van.state<FsState | undefined>(undefined);
 
   /// Internal fields
-  const projectDir = "/repo";
+  const projectDir = "/";
 
   /// Store localstorage data whenver fs state changes
   van.derive(() => fsState.val?.save());
@@ -173,7 +173,7 @@ export const DirectoryView = ({
 
     const mainFilePath = storage.mainFilePath();
     focusFile.val = state.fsList.find((t) => t.path === mainFilePath);
-    // console.log("found?", focusFile.val, "focusFile", state.fsList);
+    console.log("found?", focusFile.val, "focusFile", state.fsList);
     changeFocusFile.val = focusFile.val?.clone();
   };
 
@@ -212,7 +212,9 @@ export const DirectoryView = ({
           const type = await fs.promises.stat(path);
           if (type.isDirectory()) {
             for (const fileName of await fs.promises.readdir(path)) {
-              await addPath(dirJoin(path, fileName));
+              await addPath(
+                path === "/" ? "/" + fileName : dirJoin(path, fileName)
+              );
             }
           } else {
             const data = await fs.promises.readFile(path);
@@ -248,7 +250,7 @@ export const DirectoryView = ({
       class: "gistd-dir-view",
     },
     (_dom?: Element) =>
-      div(fsState.val?.fsList.map((t) => FsItem(projectDir + "/", t)) || [])
+      div(fsState.val?.fsList.map((t) => FsItem(projectDir, t)) || [])
   );
 
   async function intoCompiler(loader: () => Promise<void>) {
@@ -285,13 +287,13 @@ async function loadFromGit(
         return request(h);
       },
     },
-    dir: "/repo",
+    dir: "/",
     url: storage.remoteUrl(),
     ref: spec.ref,
   };
 
   try {
-    await fs.promises.readFile("/repo/.git/config");
+    await fs.promises.readFile("/.git/config");
     await git.fetch(g);
   } catch (e) {
     await git.clone(g);

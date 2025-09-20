@@ -65,9 +65,10 @@ export interface ForgejoStorageSpec {
 // @ts-ignore
 const isDev = false; // import.meta.env !== undefined;
 // const TEST_PATH = "typst/templates/blob/main/charged-ieee/template/main.typ";
-// const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";
+const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";
 // const TEST_PATH = "@http/localhost:11449/localhost.typ";
-const TEST_PATH = "@any/localhost:3000/jan/test/src/branch/main/test.typ";
+// const TEST_PATH = "@any/localhost:3000/jan/test/src/branch/main/test.typ";
+// const TEST_PATH = "Jollywatt/typst-fletcher/blob/main/docs/manual.typ";
 const README: GitHubStorageSpec = {
   type: "github" as const,
   protocol: "https",
@@ -198,7 +199,7 @@ export class GitHubStorageSpecExt {
   constructor(public spec: GitHubStorageSpec) {}
 
   mainFilePath() {
-    return `/repo/${this.spec.slug}`;
+    return `/${this.spec.slug}`;
   }
 
   originUrl() {
@@ -230,7 +231,7 @@ export class ForgejoStorageSpecExt {
   constructor(public spec: ForgejoStorageSpec) {}
 
   mainFilePath() {
-    return `/repo/${this.spec.slug}`;
+    return `/${this.spec.slug}`;
   }
 
   originUrl() {

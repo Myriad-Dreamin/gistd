@@ -8,8 +8,10 @@ const { div, button, a } = van.tags;
 import { DirectoryView, FsItemState } from "./fs";
 import { TypstDocument, Doc } from "./doc";
 import { storageSpecFromUrl } from "./storage";
+import { ErrorPanel, DiagnosticMessage } from "./error";
 
-let $typst = window.$typst;
+let $typst: import("@myriaddreamin/typst.ts/contrib/snippet").TypstSnippet =
+  window.$typst;
 
 /// Checks if the browser is in dark mode
 const isDarkMode = () =>
@@ -36,7 +38,7 @@ const App = () => {
 
   /// Styles and outputs
   const /// The source code state
-    error = van.state(""),
+    error = van.state<string | DiagnosticMessage[]>(""),
     /// The dark mode style
     darkMode = van.state(isDarkMode()),
     /// The typst document
@@ -91,14 +93,17 @@ const App = () => {
 
         const compiler = await $typst.getCompiler();
 
+        console.log("start compile", mainFilePath);
+
         const { result: data, diagnostics } = await compiler.compile({
           mainFilePath,
+          diagnostics: "full",
         });
+        console.log("data", data, "diagnostics", diagnostics);
         if (diagnostics && diagnostics.length > 0) {
-          error.val = diagnostics[0].message;
+          error.val = diagnostics;
           return;
         }
-        console.log("data", data);
 
         typstDoc.val.addChangement(["diff-v1", data]);
       }
@@ -110,7 +115,11 @@ const App = () => {
     }
   });
 
-  const exportAs = (data: string | Uint8Array, mime: string) => {
+  const exportAs = (data: string | Uint8Array | undefined, mime: string) => {
+    if (!data) {
+      return;
+    }
+
     var fileBlob = new Blob([data as any], { type: mime });
 
     // Create element with <a> tag
@@ -133,12 +142,10 @@ const App = () => {
     URL.revokeObjectURL(link.href);
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
     setTypstTheme(false);
-    const pdfData = $typst.pdf({ mainFilePath });
-    return pdfData.then((pdfData: string) =>
-      exportAs(pdfData, "application/pdf")
-    );
+    const pdfData = await $typst.pdf({ mainFilePath });
+    return exportAs(pdfData, "application/pdf");
   };
 
   DirectoryView({
@@ -167,7 +174,7 @@ const App = () => {
       ),
       div(
         { class: "gistd-toolbar-row flex-row" },
-        div({ class: "error", textContent: error }),
+        ErrorPanel({ error }),
         ExportButton("Settings", () => alert("Not implemented")),
         ExportButton("Export to PDF", exportPdf)
         // div({ style: "width: 5px" }),
@@ -196,7 +203,7 @@ const App = () => {
     let styling = darkMode
       ? `#let prefer-theme = "dark";`
       : `#let prefer-theme = "light";`;
-    await $typst.addSource("/repo/.gistd-private/styling.typ", styling);
+    await $typst.addSource("/.gistd-private/styling.typ", styling);
   }
 };
 
