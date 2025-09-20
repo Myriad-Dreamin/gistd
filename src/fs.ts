@@ -139,6 +139,7 @@ export interface DirectoryViewState {
   changeFocusFile: State<FsItemState | undefined>;
   focusFile: State<FsItemState | undefined>;
   reloadBell: State<boolean>;
+  error: State<string>;
 }
 
 /// The directory component
@@ -148,6 +149,7 @@ export const DirectoryView = ({
   changeFocusFile,
   focusFile,
   reloadBell,
+  error,
 }: DirectoryViewState) => {
   /// Capture compiler load status
   const remoteFsLoaded = van.state(false);
@@ -203,27 +205,37 @@ export const DirectoryView = ({
     case "forgejo": {
       const fs = new LightningFS("fs", { wipe: true, db: undefined! });
 
-      loadFromGit(storage, fs).then(() => {
-        remoteFsLoaded.val = true;
-      });
-      intoCompiler(async () => {
-        async function addPath(path: string) {
-          // read type
-          const type = await fs.promises.stat(path);
-          if (type.isDirectory()) {
-            for (const fileName of await fs.promises.readdir(path)) {
-              await addPath(
-                path === "/" ? "/" + fileName : dirJoin(path, fileName)
-              );
+      try {
+        loadFromGit(storage, fs)
+          .then(() => {
+            remoteFsLoaded.val = true;
+          })
+          .catch((e) => {
+            console.error(e);
+            error.val = `Failed to load git repository: ${e}`;
+          });
+        intoCompiler(async () => {
+          async function addPath(path: string) {
+            // read type
+            const type = await fs.promises.stat(path);
+            if (type.isDirectory()) {
+              for (const fileName of await fs.promises.readdir(path)) {
+                await addPath(
+                  path === "/" ? "/" + fileName : dirJoin(path, fileName)
+                );
+              }
+            } else {
+              const data = await fs.promises.readFile(path);
+              fsState.val = fsState.val!.add(path, data);
             }
-          } else {
-            const data = await fs.promises.readFile(path);
-            fsState.val = fsState.val!.add(path, data);
           }
-        }
 
-        await addPath(projectDir);
-      });
+          await addPath(projectDir);
+        });
+      } catch (e) {
+        console.error(e);
+        error.val = `Failed to load remote filesystem: ${e}`;
+      }
       break;
     }
     case "http": {
@@ -281,6 +293,8 @@ async function loadFromGit(
 
   const g = {
     fs,
+    singleBranch: true,
+    depth: 1,
     http: {
       request(h: GitHttpRequest) {
         h.url = storage.corsUrl(h.url);

@@ -229,6 +229,14 @@ path.outline_glyph {
 }
 
 .typst-dom-page {
-  background-color: white;
   margin: 10px 0;
+}
+
+.typst-dom-page:before{
+  position: absolute;
+  background-color: white;
+  width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+  height: calc(var(--data-page-height) * var(--typst-dom-scale));
+  content: "";
+  z-index: -2;
 }

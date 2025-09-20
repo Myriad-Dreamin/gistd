@@ -3,7 +3,9 @@ import type {
   TypstRenderer,
   RenderSession,
 } from "@myriaddreamin/typst.ts/dist/esm/renderer.mjs";
-import { TypstDomDocument } from "@myriaddreamin/typst.ts/dist/esm/dom.mjs";
+import { TypstDomDocument } from "./dom";
+import { MountDomOptions } from "@myriaddreamin/typst.ts/dist/esm/options.render.mjs";
+import { RenderInSessionOptions } from "@myriaddreamin/typst.ts/dist/esm/options.render.mjs";
 
 const { div } = van.tags;
 
@@ -31,6 +33,9 @@ export class TypstDocument {
 }
 
 export interface DocState {
+  maxPage?: State<number>;
+  page?: State<number>;
+  mode?: "slide" | "doc";
   darkMode: State<boolean>;
   compilerLoaded: State<boolean>;
   fontLoaded: State<boolean>;
@@ -39,6 +44,9 @@ export interface DocState {
 
 /// The document component
 export const Doc = ({
+  maxPage,
+  page,
+  mode,
   darkMode,
   compilerLoaded,
   fontLoaded,
@@ -82,11 +90,18 @@ export const Doc = ({
       kModule.val!
     );
 
-    doc.doc = await doc.plugin.renderDom({
+    doc.doc = await renderDom(doc.plugin, {
+      maxPage,
+      page: page?.val || 0,
+      mode,
       renderSession: doc.kModule,
       container: doc.elem,
       pixelPerPt: 4.5,
       domScale: 1,
+    });
+    van.derive(() => {
+      console.log("setPartialPageNumber", page?.val || 0);
+      doc.doc.setPartialPageNumber(page?.val || 0);
     });
 
     typstDoc.val = doc;
@@ -109,3 +124,26 @@ export const Doc = ({
     return dom;
   });
 };
+
+async function renderDom(renderer: TypstRenderer, options: RenderDomOptions) {
+  const t = new TypstDomDocument({
+    ...options,
+    renderMode: "dom",
+    hookedElem: options.container,
+    kModule: options.renderSession,
+    renderer: renderer,
+  });
+  await t.impl.mountDom(options.pixelPerPt);
+  return t;
+}
+
+interface UserRenderDomOptions {
+  page?: number;
+  mode?: "slide" | "doc";
+}
+
+interface RenderDomOptions
+  extends RenderInSessionOptions<MountDomOptions>,
+    UserRenderDomOptions {
+  maxPage?: State<number>;
+}

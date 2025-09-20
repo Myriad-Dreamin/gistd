@@ -2,12 +2,12 @@ import "./gistd.css";
 import "./typst.css";
 import "./typst.ts";
 import "./loader.ts";
-import van from "vanjs-core";
+import van, { State } from "vanjs-core";
 const { div, button, a } = van.tags;
 
 import { DirectoryView, FsItemState } from "./fs";
 import { TypstDocument, Doc } from "./doc";
-import { storageSpecFromUrl } from "./storage";
+import { specFromUrl } from "./spec";
 import { ErrorPanel, DiagnosticMessage } from "./error";
 
 let $typst: import("@myriaddreamin/typst.ts/contrib/snippet").TypstSnippet =
@@ -24,6 +24,40 @@ const ExportButton = (title: string, onclick: () => void) =>
     textContent: title,
   });
 
+const pageControls = ({
+  page,
+  maxPage,
+  mode,
+}: {
+  page: State<number>;
+  maxPage: State<number>;
+  mode: "slide" | "doc";
+}) => {
+  if (mode === "slide") {
+    return [
+      button({
+        onclick: () => {
+          page.val = Math.max(Math.min(page.val - 1, maxPage.val), 1);
+        },
+        textContent: "Prev",
+      }),
+      button({
+        onclick: () => {
+          page.val = 1;
+        },
+        textContent: van.derive(() => Math.min(page.val, maxPage.val)),
+      }),
+      button({
+        onclick: () => {
+          page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
+        },
+        textContent: "Next",
+      }),
+    ];
+  }
+  return [];
+};
+
 const App = () => {
   /// External status
   const /// Captures compiler load status
@@ -31,10 +65,14 @@ const App = () => {
     /// Captures font load status
     fontLoaded = van.state(false),
     /// Binds to filesystem reload event
-    reloadBell = van.state(false),
+    reloadBell = van.state(false);
+  const {
     /// Creates storage spec from url
-    storage = storageSpecFromUrl();
-  console.log("storage", storage);
+    storage,
+    page: initialPage,
+    mode,
+  } = specFromUrl();
+  console.log("storage", storage, "page", initialPage, "mode", mode);
 
   /// Styles and outputs
   const /// The source code state
@@ -46,7 +84,11 @@ const App = () => {
     /// request to change focus file
     changeFocusFile = van.state<FsItemState | undefined>(undefined),
     /// The current focus file
-    focusFile = van.state<FsItemState | undefined>(undefined);
+    focusFile = van.state<FsItemState | undefined>(undefined),
+    /// The current page
+    page = van.state(initialPage),
+    /// The maximum page
+    maxPage = van.state(0);
 
   /// Storage spec
   const mainFilePath = storage.mainFilePath(),
@@ -99,7 +141,7 @@ const App = () => {
           mainFilePath,
           diagnostics: "full",
         });
-        console.log("data", data, "diagnostics", diagnostics);
+        console.log("diagnostics", diagnostics);
         if (diagnostics && diagnostics.length > 0) {
           error.val = diagnostics;
           return;
@@ -154,6 +196,7 @@ const App = () => {
     changeFocusFile,
     focusFile,
     reloadBell,
+    error: error as State<string>,
   });
 
   return div(
@@ -175,6 +218,9 @@ const App = () => {
       div(
         { class: "gistd-toolbar-row flex-row" },
         ErrorPanel({ error }),
+        // prev, next
+        ...pageControls({ page, maxPage, mode }),
+
         ExportButton("Settings", () => alert("Not implemented")),
         ExportButton("Export to PDF", exportPdf)
         // div({ style: "width: 5px" }),
@@ -183,7 +229,15 @@ const App = () => {
     ),
     div(
       { class: "doc-row flex-row" },
-      Doc({ darkMode, compilerLoaded, fontLoaded, typstDoc })
+      Doc({
+        maxPage,
+        page,
+        mode,
+        darkMode,
+        compilerLoaded,
+        fontLoaded,
+        typstDoc,
+      })
     ),
     div(
       { class: "footer flex-row" },

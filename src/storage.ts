@@ -62,13 +62,6 @@ export interface ForgejoStorageSpec {
   cors: CorsOption;
 }
 
-// @ts-ignore
-const isDev = false; // import.meta.env !== undefined;
-// const TEST_PATH = "typst/templates/blob/main/charged-ieee/template/main.typ";
-const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";
-// const TEST_PATH = "@http/localhost:11449/localhost.typ";
-// const TEST_PATH = "@any/localhost:3000/jan/test/src/branch/main/test.typ";
-// const TEST_PATH = "Jollywatt/typst-fletcher/blob/main/docs/manual.typ";
 const README: GitHubStorageSpec = {
   type: "github" as const,
   protocol: "https",
@@ -81,13 +74,6 @@ const README: GitHubStorageSpec = {
   slug: "README.typ",
   cors: true,
 };
-
-export function storageSpecFromUrl(): StorageSpecExt {
-  const inputPath = window.location.pathname.slice(1) || "";
-  return createStorageSpecExt(
-    storageSpecFromPath(isDev ? TEST_PATH : inputPath, window.location.search)
-  );
-}
 
 export function createStorageSpecExt(spec: StorageSpec): StorageSpecExt {
   switch (spec.type) {
@@ -102,11 +88,11 @@ export function createStorageSpecExt(spec: StorageSpec): StorageSpecExt {
 
 export function storageSpecFromPath(
   inputPath: string,
-  search?: string,
+  _searchParams?: URLSearchParams,
   helpSpec: StorageSpec = README
 ): StorageSpec {
   const [prefix, ...__] = inputPath.split("/");
-  const searchParams = new URLSearchParams(search || "");
+  const searchParams = _searchParams || new URLSearchParams();
   const originCors = searchParams.get("g-cors");
   const getCors = (protocol: string) => {
     if (originCors && originCors !== "false" && originCors !== "true") {
@@ -165,7 +151,7 @@ export function storageSpecFromPath(
 
     const [_any2, ...rest2] = inputPath.split("/");
     const url = new URL(protocol + "://" + rest2.join("/"));
-    url.search = search || "";
+    url.search = searchParams.toString();
 
     return { type: "http", url: url.toString(), cors: getCors(protocol) };
   } else {
