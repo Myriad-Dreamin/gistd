@@ -172,6 +172,19 @@ const App = () => {
           return;
         }
 
+        // TODO: support pdfpc
+        if (mode === "slide") {
+          try {
+            const pdfpc = await compiler.query({
+              mainFilePath,
+              selector: "<pdfpc>",
+            });
+            console.log("pdfpc", pdfpc);
+          } catch (e) {
+            console.log("this slide does not have pdfpc");
+          }
+        }
+
         typstDoc.val.addChangement(["diff-v1", data]);
       }
 
