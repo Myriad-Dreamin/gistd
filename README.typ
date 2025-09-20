@@ -47,6 +47,15 @@ Example Documents:
 - https://gistd.myriad-dreamin.com/Jollywatt/typst-fletcher/blob/main/docs/manual.typ
 - https://gistd.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ
 
+== View Parameters
+
+These URL parameters can change the behavior of gistd.
+
+- `g-page`: The page number to display. Default is `1`. Only available in the slide mode.
+- `g-mode`: The mode to display.
+  - `doc`: View the document in the document mode.
+  - `slide`: View the document in the slide mode.
+
 = Loading a document by arbitrary links
 
 Assuming that you have arbitrary link, for example:
