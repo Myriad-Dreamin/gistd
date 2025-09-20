@@ -7,6 +7,8 @@
 #show regex("any-gistd.myriad-dreamin.com|@(?:any|http)"): text.with(red)
 #show link: text.with(blue)
 #show link: underline
+
+#set document(title: "Gistd Documentation")
 #set par(justify: true) if not is-markdown
 
 #let verbatim(body) = {
