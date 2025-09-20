@@ -88,12 +88,11 @@ export function createStorageSpecExt(spec: StorageSpec): StorageSpecExt {
 
 export function storageSpecFromPath(
   inputPath: string,
-  _searchParams?: URLSearchParams,
+  searchParams?: URLSearchParams,
   helpSpec: StorageSpec = README
 ): StorageSpec {
   const [prefix, ...__] = inputPath.split("/");
-  const searchParams = _searchParams || new URLSearchParams();
-  const originCors = searchParams.get("g-cors");
+  const originCors = searchParams?.get("g-cors");
   const getCors = (protocol: string) => {
     if (originCors && originCors !== "false" && originCors !== "true") {
       return originCors;
@@ -101,7 +100,7 @@ export function storageSpecFromPath(
 
     return protocol == "https" ? originCors !== "false" : originCors === "true";
   };
-  searchParams.delete("g-cors");
+  searchParams?.delete("g-cors");
 
   if (prefix === "@any" || prefix === "@http") {
     const [domain, ...segments] = inputPath.split("/").slice(1);
@@ -151,7 +150,7 @@ export function storageSpecFromPath(
 
     const [_any2, ...rest2] = inputPath.split("/");
     const url = new URL(protocol + "://" + rest2.join("/"));
-    url.search = searchParams.toString();
+    url.search = searchParams?.toString() || "";
 
     return { type: "http", url: url.toString(), cors: getCors(protocol) };
   } else {
