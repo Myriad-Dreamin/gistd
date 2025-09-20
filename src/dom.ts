@@ -92,6 +92,10 @@ export function provideDomDoc<
         }
         this.domScale = this.opts.domScale;
       }
+      this.partialRenderPage = Math.max(
+        Math.min(this.opts.page || 0, this.opts.maxPage?.val || 0) - 1,
+        0
+      );
       this.maxPage = this.opts.maxPage;
       this.previewMode =
         this.opts.mode === "slide"
