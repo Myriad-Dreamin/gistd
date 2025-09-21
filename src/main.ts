@@ -2,7 +2,7 @@ import "./gistd.css";
 import "./typst.css";
 import "./typst.ts";
 
-// From Bundle
+// From NPM
 // import "./loader.bundle.ts";
 // From CDN
 import "./loader.ts";

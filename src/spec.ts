@@ -3,6 +3,7 @@ import {
   StorageSpecExt,
   storageSpecFromPath,
 } from "./storage";
+import { README, README_CN } from "./storage";
 
 // @ts-ignore
 const isDev = false; // import.meta.env !== undefined;
@@ -27,6 +28,9 @@ export interface Spec {
 export function specFromUrl(): Spec {
   const inputPath = window.location.pathname.slice(1) || "";
   const search = new URLSearchParams(window.location.search || "");
+  const readme = /(?:-|.)cn/g.test(window.location.hostname)
+    ? README_CN
+    : README;
 
   const pageStr = search.get("g-page") || DEFAULT_PAGE;
   const page = Number.parseInt(pageStr);
@@ -39,7 +43,7 @@ export function specFromUrl(): Spec {
 
   return {
     storage: createStorageSpecExt(
-      storageSpecFromPath(isDev ? TEST_PATH : inputPath, search)
+      storageSpecFromPath(isDev ? TEST_PATH : inputPath, search, readme)
     ),
     page,
     mode,

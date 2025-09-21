@@ -62,7 +62,7 @@ export interface ForgejoStorageSpec {
   cors: CorsOption;
 }
 
-const README: GitHubStorageSpec = {
+export const README: GitHubStorageSpec = {
   type: "github" as const,
   protocol: "https",
   domain: "github.com",
@@ -72,6 +72,19 @@ const README: GitHubStorageSpec = {
   ref: "main",
   rest: ["README.typ"],
   slug: "README.typ",
+  cors: true,
+};
+
+export const README_CN: GitHubStorageSpec = {
+  type: "github" as const,
+  protocol: "https",
+  domain: "github.com",
+  user: "Myriad-Dreamin",
+  repo: "gistd",
+  kind: "blob",
+  ref: "main",
+  rest: ["docs/README.zh-CN.typ"],
+  slug: "docs/README.zh-CN.typ",
   cors: true,
 };
 
