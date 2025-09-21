@@ -196,7 +196,7 @@ const App = () => {
               error.val = diagnostics2;
               return;
             }
-            typstDoc.val?.addChangement(["diff-v1", data]);
+            typstDoc.val?.addChangement(["new", data]);
             error.val = "";
 
             if ("title" in world) {

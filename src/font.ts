@@ -1,3 +1,4 @@
+// @ts-ignore
 import type { LazyFont } from "@myriaddreamin/typst.ts/dist/esm/options.init.mjs";
 import remoteFontInfo from "./fontInfo.json";
 
