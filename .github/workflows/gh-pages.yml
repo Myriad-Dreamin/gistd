@@ -41,6 +41,7 @@ jobs:
           node-version: 24
           cache: "pnpm"
       - run: pnpm install
+      - run: node scripts/dummy_font_info.ts
       - run: pnpm build
       - name: Setup Pages
         uses: actions/configure-pages@v5
