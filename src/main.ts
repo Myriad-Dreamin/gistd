@@ -1,7 +1,14 @@
 import "./gistd.css";
 import "./typst.css";
 import "./typst.ts";
+
+// From Bundle
+// import "./loader.bundle.ts";
+// From CDN
 import "./loader.ts";
+
+import fontInfo from "./fontInfo.json";
+
 import van, { State } from "vanjs-core";
 const { div, button, a } = van.tags;
 
@@ -9,9 +16,9 @@ import { DirectoryView, FsItemState } from "./fs";
 import { TypstDocument, Doc } from "./doc";
 import { specFromUrl } from "./spec";
 import { ErrorPanel, DiagnosticMessage } from "./error";
+import type { TypstCompiler } from "@myriaddreamin/typst.ts";
 
-let $typst: import("@myriaddreamin/typst.ts/contrib/snippet").TypstSnippet =
-  window.$typst;
+let $typst = window.$typst;
 
 /// Checks if the browser is in dark mode
 const isDarkMode = () =>
@@ -122,13 +129,20 @@ const App = () => {
     description = storage.description(),
     removeExtension = fileName.replace(/\.typ$/, "");
 
+  /// Changes Title for Browser History
+  document.title = window.location.pathname;
   /// Checks compiler status
   window.$typst$script.then(async () => {
     $typst = window.$typst;
 
     await $typst.getCompiler();
+    console.log("fontInfo", fontInfo);
+    if ("setFonts" in $typst) {
+      // todo: remove me
+      // @ts-ignore
+      await $typst.setFonts(fontInfo);
+    }
     compilerLoaded.val = true;
-    await $typst.svg({ mainContent: "" });
     fontLoaded.val = true;
   });
 
@@ -136,8 +150,6 @@ const App = () => {
   window
     .matchMedia?.("(prefers-color-scheme: dark)")
     .addEventListener("change", (event) => (darkMode.val = event.matches));
-
-  history.pushState({}, window.location.pathname);
 
   /// Triggers compilation when precondition is met or changed
   van.derive(async () => {
@@ -164,33 +176,84 @@ const App = () => {
 
         console.log("start compile", mainFilePath);
 
-        const { result: data, diagnostics } = await compiler.compile({
-          mainFilePath,
-          diagnostics: "full",
-        });
-        console.log("diagnostics", diagnostics);
-        if (diagnostics && diagnostics.length > 0) {
-          error.val = diagnostics;
-          return;
-        }
+        if ("runWithWorld" in compiler) {
+          await compiler.reset();
+          // todo: remove me
+          // @ts-ignore
+          await compiler.runWithWorld({ mainFilePath }, async (world) => {
+            const { hasError, diagnostics } = (await world.compile()) as {
+              hasError?: boolean;
+              diagnostics: DiagnosticMessage[];
+            };
 
-        // TODO: support pdfpc
-        if (mode === "slide") {
-          try {
-            const pdfpc = await compiler.query({
-              mainFilePath,
-              selector: "<pdfpc>",
-            });
-            console.log("pdfpc", pdfpc);
-          } catch (e) {
-            console.log("this slide does not have pdfpc");
+            console.log("diagnostics", diagnostics);
+            if (
+              (hasError === undefined &&
+                diagnostics &&
+                diagnostics.length > 0) ||
+              hasError
+            ) {
+              error.val = diagnostics || [];
+              return;
+            }
+
+            const { result: data, diagnostics: diagnostics2 } =
+              await world.vector();
+            if (diagnostics2 && diagnostics2.length > 0) {
+              error.val = diagnostics2;
+              return;
+            }
+            typstDoc.val?.addChangement(["diff-v1", data]);
+            error.val = "";
+
+            if ("title" in world) {
+              const title = world.title();
+              if (title) {
+                document.title = title;
+              }
+            }
+
+            // TODO: support pdfpc
+            if (mode === "slide") {
+              try {
+                const pdfpc = await world.query({
+                  selector: "<pdfpc>",
+                });
+                console.log("pdfpc", pdfpc);
+              } catch (e) {
+                console.log("this slide does not have pdfpc");
+              }
+            }
+          });
+        } else {
+          let compilerCompat = compiler as any as TypstCompiler;
+          const { result: data, diagnostics } = await compilerCompat.compile({
+            mainFilePath,
+            diagnostics: "full",
+          });
+          console.log("diagnostics", diagnostics);
+          if (diagnostics && diagnostics.length > 0) {
+            error.val = diagnostics;
+            return;
           }
+
+          // TODO: support pdfpc
+          if (mode === "slide") {
+            try {
+              const pdfpc = await compilerCompat.query({
+                mainFilePath,
+                selector: "<pdfpc>",
+              });
+              console.log("pdfpc", pdfpc);
+            } catch (e) {
+              console.log("this slide does not have pdfpc");
+            }
+          }
+
+          typstDoc.val.addChangement(["diff-v1", data]);
+          error.val = "";
         }
-
-        typstDoc.val.addChangement(["diff-v1", data]);
       }
-
-      error.val = "";
     } catch (e) {
       error.val = e as string;
       console.error(e);

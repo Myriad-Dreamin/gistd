@@ -1,4 +1,8 @@
+// todo: remove me
+// @ts-ignore
 import { createTypstFontBuilder } from "@myriaddreamin/typst.ts/compiler";
+// todo: remove me
+// @ts-ignore
 import type { TypstFontInfo } from "@myriaddreamin/typst.ts/compiler";
 import fs from "fs/promises";
 import { existsSync } from "fs";

@@ -126,8 +126,8 @@ export function provideDomDoc<
       return this.tmpl.content.firstElementChild;
     }
 
-    async mountDom(pixelPerPt: number | undefined) {
-      console.log("mountDom", pixelPerPt);
+    async mountDom(_pixelPerPt: number | undefined) {
+      // console.log("mountDom", pixelPerPt);
 
       if (this.docKernel) {
         throw new Error("already mounted");
@@ -147,7 +147,7 @@ export function provideDomDoc<
       this.docKernel.bind_functions({
         populateGlyphs: (data: string) => {
           let svg = this.createElement(data)!;
-          console.log("populateGlyphs", svg);
+          // console.log("populateGlyphs", svg);
           let content = svg.firstElementChild!;
           this.resourceHeader.append(content);
         },
@@ -155,7 +155,7 @@ export function provideDomDoc<
     }
 
     async cancelAnyway$dom() {
-      console.log("cancelAnyway$dom");
+      // console.log("cancelAnyway$dom");
       if (this.current_task) {
         const task = this.current_task;
         this.current_task = undefined;
@@ -192,7 +192,7 @@ export function provideDomDoc<
       if (rect.width <= 0 || rect.height <= 0) {
         rect.x = rect.y = rect.width = rect.height = 0;
       }
-      // console.log('ccc', basePos, appPos, rect);
+      // // console.log('ccc', basePos, appPos, rect);
       return rect;
     }
 
@@ -203,7 +203,7 @@ export function provideDomDoc<
 
       // only display the first page
       let idx = 0;
-      //   console.log("preprocess", this.partialRenderPage);
+      //   // console.log("preprocess", this.partialRenderPage);
       for (const page of pages) {
         if (idx === this.partialRenderPage) {
           page.page.style.display = "block";
@@ -219,7 +219,7 @@ export function provideDomDoc<
 
     updateFullscreen() {
       const inFullScreenVal = this.inFullScreen?.val;
-      const pageVal = this.maxPage?.val || 0;
+      // const pageVal = this.maxPage?.val || 0;
 
       if (!inFullScreenVal) {
         return;
@@ -232,13 +232,13 @@ export function provideDomDoc<
         return;
       }
 
-      console.log(
-        "updateFullscreen reset dom scale",
-        pageVal,
-        inFullScreenVal,
-        this.hookedElem,
-        selectedPage
-      );
+      // console.log(
+      //   "updateFullscreen reset dom scale",
+      //   pageVal,
+      //   inFullScreenVal,
+      //   this.hookedElem,
+      //   selectedPage
+      // );
 
       // dataset.width and dataset.height
       const widthStr = selectedPage.dataset.width;
@@ -276,11 +276,11 @@ export function provideDomDoc<
 
     async doRender$dom(ctx: TypstCancellationToken) {
       if (this.previewMode === PreviewMode.Slide) {
-        console.log(
-          "doRender$dom slide",
-          this.partialRenderPage,
-          this.prevRenderPage
-        );
+        // console.log(
+        //   "doRender$dom slide",
+        //   this.partialRenderPage,
+        //   this.prevRenderPage
+        // );
       }
 
       const condOrExit = <T>(needFrame: boolean, cb: () => Promise<T>) => {
@@ -305,7 +305,7 @@ export function provideDomDoc<
       const renderPage = async (i: number) => {
         await animationFrame();
         if (ctx.isCancelRequested()) {
-          console.log("cancel stage", RepaintStage.Layout, i);
+          // console.log("cancel stage", RepaintStage.Layout, i);
           return undefined;
         }
         const page = pages[i].page;
@@ -345,7 +345,7 @@ export function provideDomDoc<
         await calc(RepaintStage.Svg);
         await calc(RepaintStage.Semantics);
         if (ctx.isCancelRequested()) {
-          console.log("cancel stage", RepaintStage.Semantics, i);
+          // console.log("cancel stage", RepaintStage.Semantics, i);
           return undefined;
         }
         if (needCalc(RepaintStage.PrepareCanvas)) {
@@ -364,7 +364,7 @@ export function provideDomDoc<
       const renderPages = async (inWindow: boolean) => {
         for (let idx = 0; idx < pages.length; ++idx) {
           if (ctx.isCancelRequested()) {
-            console.log("cancel page", RepaintStage.Layout, idx);
+            // console.log("cancel page", RepaintStage.Layout, idx);
             return;
           }
 
@@ -389,7 +389,7 @@ export function provideDomDoc<
       }
       this.updateFullscreen();
       this.prevRenderPage = this.partialRenderPage;
-      console.log("finished", RepaintStage.Layout);
+      // console.log("finished", RepaintStage.Layout);
     }
   };
 }
