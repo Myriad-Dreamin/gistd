@@ -450,5 +450,5 @@ const promisifiedReq = <T>(req: IDBRequest<T>): Promise<T> => {
 
 const refreshDate = () => {
   const DAY = 24 * 60 * 60 * 1000;
-  return Date.now() + 25 * DAY + Math.random() * 10 * DAY;
+  return Date.now() + 3 * DAY + Math.random() * 1 * DAY;
 };
