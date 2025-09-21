@@ -19,13 +19,13 @@ const DEFAULT_PAGE = "1";
 // const DEFAULT_MODE = "doc";
 const DEFAULT_MODE = isDev ? DEFAULT_DEV_MODE : "doc";
 
-export interface Spec {
+export interface Args {
   storage: StorageSpecExt;
   page: number;
   mode: "slide" | "doc";
 }
 
-export function specFromUrl(): Spec {
+export function argsFromUrl(): Args {
   const inputPath = window.location.pathname.slice(1) || "";
   const search = new URLSearchParams(window.location.search || "");
   const readme = /(?:-|.)cn/g.test(window.location.hostname)

@@ -1,20 +1,12 @@
-import "./gistd.css";
-import "./typst.css";
 import "./typst.ts";
-
-// From NPM
-// import "./loader.bundle.ts";
-// From CDN
-import "./loader.ts";
-
-import fontInfo from "./fontInfo.json";
 
 import van, { State } from "vanjs-core";
 const { div, button, a } = van.tags;
 
 import { DirectoryView, FsItemState } from "./fs";
 import { TypstDocument, Doc } from "./doc";
-import { specFromUrl } from "./spec";
+import { argsFromUrl } from "./args";
+import { getFontProvider } from "./font";
 import { ErrorPanel, DiagnosticMessage } from "./error";
 import type { TypstCompiler } from "@myriaddreamin/typst.ts";
 
@@ -96,7 +88,7 @@ const App = () => {
     storage,
     page: initialPage,
     mode,
-  } = specFromUrl();
+  } = argsFromUrl();
   console.log("storage", storage, "page", initialPage, "mode", mode);
   if (mode === "slide") {
     document.documentElement.dataset.mode = "slide";
@@ -136,13 +128,14 @@ const App = () => {
     $typst = window.$typst;
 
     await $typst.getCompiler();
-    console.log("fontInfo", fontInfo);
+    compilerLoaded.val = true;
     if ("setFonts" in $typst) {
+      const fontInfo = await getFontProvider();
+      console.log("fontInfo", fontInfo);
       // todo: remove me
       // @ts-ignore
       await $typst.setFonts(fontInfo);
     }
-    compilerLoaded.val = true;
     fontLoaded.val = true;
   });
 

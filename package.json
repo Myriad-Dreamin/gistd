@@ -16,15 +16,16 @@
   "license": "ISC",
   "packageManager": "pnpm@10.16.1",
   "devDependencies": {
+    "@types/node": "^24.5.2",
     "vite": "^7.1.5",
+    "vite-plugin-dynamic-import": "^1.6.0",
     "vite-plugin-singlefile": "^2.3.0",
-    "vitest": "^3.2.4",
-    "@types/node": "^24.5.2"
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@isomorphic-git/lightning-fs": "^4.6.2",
-    "@myriaddreamin/typst-ts-web-compiler": "0.6.1-rc3",
     "@myriaddreamin/typst-ts-renderer": "0.6.1-rc3",
+    "@myriaddreamin/typst-ts-web-compiler": "0.6.1-rc3",
     "@myriaddreamin/typst.ts": "0.6.1-rc3",
     "isomorphic-git": "^1.33.1",
     "vanjs-core": "^1.5.5"

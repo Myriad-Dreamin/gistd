@@ -8,8 +8,8 @@ import compiler from "@myriaddreamin/typst-ts-web-compiler/wasm?url";
 
 (() => {
   const tsConfig = {
-    compilerModule: compiler,
-    rendererModule: renderer,
+    compilerModule: fetch(compiler),
+    rendererModule: fetch(renderer),
   };
   // todo: remove me
   // @ts-ignore
