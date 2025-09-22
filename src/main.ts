@@ -62,7 +62,7 @@ const pageControls = ({
         onclick: () => {
           page.val = 1;
         },
-        textContent: van.derive(() => Math.min(page.val, maxPage.val)),
+        textContent: van.derive(() => `${Math.min(page.val, maxPage.val)} / ${maxPage.val}`),
       }),
       button({
         onclick: () => {
@@ -212,7 +212,8 @@ const App = () => {
                 const pdfpc = await world.query({
                   selector: "<pdfpc>",
                 });
-                console.log("pdfpc", pdfpc);
+                const processedPdfpc = processPdfpc(pdfpc);
+                console.log("processed pdfpc", processedPdfpc);
               } catch (e) {
                 console.log("this slide does not have pdfpc");
               }
@@ -237,7 +238,8 @@ const App = () => {
                 mainFilePath,
                 selector: "<pdfpc>",
               });
-              console.log("pdfpc", pdfpc);
+              const processedPdfpc = processPdfpc(pdfpc);
+              console.log("processed pdfpc", processedPdfpc);
             } catch (e) {
               console.log("this slide does not have pdfpc");
             }
@@ -416,6 +418,70 @@ const App = () => {
       ? `#let prefer-theme = "dark";`
       : `#let prefer-theme = "light";`;
     await $typst.addSource("/.gistd-private/styling.typ", styling);
+  }
+
+  function processPdfpc(pdfpc: unknown): any {
+    const arr = (pdfpc as any[]).map((it) => it.value);
+    const newSlideIndices = arr
+      .map((item, i) => (item.t === "NewSlide" ? i : -1))
+      .filter((i) => i >= 0);
+    const config =
+      newSlideIndices.length > 0 ? arr.slice(0, newSlideIndices[0]) : arr;
+    const slides: any[][] = [];
+    for (let i = 0; i < newSlideIndices.length - 1; i++) {
+      slides.push(
+        arr.slice(newSlideIndices[i] + 1, newSlideIndices[i + 1])
+      );
+    }
+    if (newSlideIndices.length > 0) {
+      slides.push(arr.slice(newSlideIndices[newSlideIndices.length - 1] + 1));
+    }
+    const pdfpcObj: any = {
+      pdfpcFormat: 2,
+      disableMarkdown: false,
+    };
+    for (const item of config) {
+      const key = item.t.charAt(0).toLowerCase() + item.t.slice(1);
+      pdfpcObj[key] = item.v;
+    }
+    const pages: any[] = [];
+    for (const slide of slides) {
+      const page: any = {
+        idx: 0,
+        label: "1",
+        overlay: 0,
+        forcedOverlay: false,
+        hidden: false,
+      };
+      for (const item of slide) {
+        if (item.t === "Idx") {
+          page.idx = item.v;
+        } else if (item.t === "LogicalSlide") {
+          page.label = String(item.v);
+        } else if (item.t === "Overlay") {
+          page.overlay = item.v;
+          page.forcedOverlay = item.v > 0;
+        } else if (item.t === "HiddenSlide") {
+          page.hidden = true;
+        } else if (item.t === "SaveSlide") {
+          if (!("savedSlide" in pdfpcObj)) {
+            pdfpcObj.savedSlide = Number(page.label) - 1;
+          }
+        } else if (item.t === "EndSlide") {
+          if (!("endSlide" in pdfpcObj)) {
+            pdfpcObj.endSlide = Number(page.label) - 1;
+          }
+        } else if (item.t === "Note") {
+          page.note = item.v;
+        } else {
+          const key = item.t.charAt(0).toLowerCase() + item.t.slice(1);
+          pdfpcObj[key] = item.v;
+        }
+      }
+      pages.push(page);
+    }
+    pdfpcObj.pages = pages;
+    return pdfpcObj;
   }
 };
 
