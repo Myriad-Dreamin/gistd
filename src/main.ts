@@ -23,6 +23,17 @@ const ExportButton = (title: string, onclick: () => void) =>
     textContent: title,
   });
 
+const ModeButton = (mode: "slide" | "doc") =>
+  button({
+    textContent: mode.charAt(0).toUpperCase() + mode.slice(1),
+    onclick: () => {
+      const newMode = mode === "slide" ? "doc" : "slide";
+      const url = new URL(window.location.href);
+      url.searchParams.set("g-mode", newMode);
+      window.location.href = url.toString();
+    },
+  });
+
 const fullScreenButton = (mode: "slide" | "doc") => {
   if (mode === "slide") {
     return [
@@ -62,7 +73,7 @@ const pageControls = ({
         onclick: () => {
           page.val = 1;
         },
-        textContent: van.derive(() => Math.min(page.val, maxPage.val)),
+        textContent: van.derive(() => `${Math.min(page.val, maxPage.val)} / ${maxPage.val}`),
       }),
       button({
         onclick: () => {
@@ -112,7 +123,13 @@ const App = () => {
     /// The current page
     page = van.state(initialPage),
     /// The maximum page
-    maxPage = van.state(0);
+    maxPage = van.state(0),
+    /// The pdfpc data
+    pdfpc = van.state<any>(null),
+    /// Record first idx for each label
+    labelFirstIdx = van.state<Record<string, number>>({}),
+    /// Record current visited idx for each label
+    labelCurrentIdx = van.state<Record<string, number>>({});
 
   /// Storage spec
   const mainFilePath = storage.mainFilePath(),
@@ -120,6 +137,25 @@ const App = () => {
     fileName = storage.fileName(),
     description = storage.description(),
     removeExtension = fileName.replace(/\.typ$/, "");
+
+  const initializeLabelIndices = () => {
+    if (!pdfpc.val || !pdfpc.val.pages) return;
+    
+    const firstIdx: Record<string, number> = {};
+    const currentIdx: Record<string, number> = {};
+    
+    // Find first occurrence of each label
+    pdfpc.val.pages.forEach((page: any, idx: number) => {
+      const label = page.label;
+      if (!(label in firstIdx)) {
+        firstIdx[label] = idx;
+        currentIdx[label] = idx; // Initialize current to first
+      }
+    });
+    
+    labelFirstIdx.val = firstIdx;
+    labelCurrentIdx.val = currentIdx;
+  };
 
   /// Changes Title for Browser History
   document.title = window.location.pathname;
@@ -206,13 +242,17 @@ const App = () => {
               }
             }
 
-            // TODO: support pdfpc
+            // support pdfpc
             if (mode === "slide") {
               try {
-                const pdfpc = await world.query({
+                const pdfpcData = await world.query({
                   selector: "<pdfpc>",
                 });
-                console.log("pdfpc", pdfpc);
+                const processedPdfpc = processPdfpc(pdfpcData);
+                pdfpc.val = processedPdfpc;
+                // Initialize label indices when new pdfpc data is loaded
+                initializeLabelIndices();
+                console.log("processed pdfpc", processedPdfpc);
               } catch (e) {
                 console.log("this slide does not have pdfpc");
               }
@@ -230,14 +270,16 @@ const App = () => {
             return;
           }
 
-          // TODO: support pdfpc
           if (mode === "slide") {
             try {
-              const pdfpc = await compilerCompat.query({
+              const pdfpcData = await compilerCompat.query({
                 mainFilePath,
                 selector: "<pdfpc>",
               });
-              console.log("pdfpc", pdfpc);
+              pdfpc.val = processPdfpc(pdfpcData);
+              // Initialize label indices when new pdfpc data is loaded
+              initializeLabelIndices();
+              console.log("processed pdfpc", pdfpc.val);
             } catch (e) {
               console.log("this slide does not have pdfpc");
             }
@@ -250,6 +292,18 @@ const App = () => {
     } catch (e) {
       error.val = e as string;
       console.error(e);
+    }
+  });
+
+  // Track current page label for history
+  van.derive(() => {
+    if (mode === "slide" && pdfpc.val && pdfpc.val.pages && page.val > 0) {
+      const currentIdx = page.val - 1;
+      const pages = pdfpc.val.pages;
+      if (currentIdx >= 0 && currentIdx < pages.length) {
+        const currentLabel = pages[currentIdx].label;
+        labelCurrentIdx.val = { ...labelCurrentIdx.val, [currentLabel]: currentIdx };
+      }
     }
   });
 
@@ -297,17 +351,60 @@ const App = () => {
       }
     });
 
+    const getNextPageByLabel = (currentPage: number, direction: 'next' | 'prev'): number => {
+      if (!pdfpc.val || !pdfpc.val.pages) {
+        return direction === 'next' ? currentPage + 1 : currentPage - 1;
+      }
+      const pages = pdfpc.val.pages;
+      const currentIdx = currentPage - 1; // page.val from 1, idx from 0
+      if (currentIdx < 0 || currentIdx >= pages.length) {
+        return direction === 'next' ? currentPage + 1 : currentPage - 1;
+      }
+      const currentLabel = pages[currentIdx].label;
+
+      // Record current label's idx
+      labelCurrentIdx.val = { ...labelCurrentIdx.val, [currentLabel]: currentIdx };
+
+      if (direction === 'next') {
+        for (let i = currentIdx + 1; i < pages.length; i++) {
+          if (pages[i].label !== currentLabel) {
+            const targetLabel = pages[i].label;
+            // Return to last visited idx of this label, or first occurrence if never visited
+            const visitedIdx = labelCurrentIdx.val[targetLabel] ?? labelFirstIdx.val[targetLabel] ?? i;
+            return visitedIdx + 1; // back to 1-based
+          }
+        }
+        return currentPage + 1; // fallback
+      } else {
+        for (let i = currentIdx - 1; i >= 0; i--) {
+          if (pages[i].label !== currentLabel) {
+            const targetLabel = pages[i].label;
+            // Return to last visited idx of this label, or first occurrence if never visited
+            const visitedIdx = labelCurrentIdx.val[targetLabel] ?? labelFirstIdx.val[targetLabel] ?? i;
+            return visitedIdx + 1; // back to 1-based
+          }
+        }
+        return currentPage - 1; // fallback
+      }
+    };
+
     window.addEventListener("keydown", (e) => {
       if (e.key === "ArrowLeft") {
-        page.val = Math.max(Math.min(page.val - 1, maxPage.val), 1);
+        e.preventDefault();
+        const nextPage = getNextPageByLabel(page.val, 'prev');
+        page.val = Math.max(Math.min(nextPage, maxPage.val), 1);
       }
       if (e.key === "ArrowRight") {
-        page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
+        e.preventDefault();
+        const nextPage = getNextPageByLabel(page.val, 'next');
+        page.val = Math.max(Math.min(nextPage, maxPage.val), 1);
       }
       if (e.key === "ArrowUp") {
+        e.preventDefault();
         page.val = Math.max(Math.min(page.val - 1, maxPage.val), 1);
       }
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown" || e.key === " " || e.key === "Enter") {
+        e.preventDefault();
         page.val = Math.max(Math.min(page.val + 1, maxPage.val), 1);
       }
     });
@@ -378,6 +475,8 @@ const App = () => {
         ...fullScreenButton(mode),
         ...pageControls({ page, maxPage, mode }),
 
+        ModeButton(mode),
+
         ExportButton("Settings", () => alert("Not implemented")),
         ExportButton("Export to PDF", exportPdf)
         // div({ style: "width: 5px" }),
@@ -416,6 +515,73 @@ const App = () => {
       ? `#let prefer-theme = "dark";`
       : `#let prefer-theme = "light";`;
     await $typst.addSource("/.gistd-private/styling.typ", styling);
+  }
+
+  function processPdfpc(pdfpc: unknown): any {
+    if (!pdfpc || !(pdfpc as any[]).length) {
+      return null;
+    }
+    const arr = (pdfpc as any[]).map((it) => it.value);
+    const newSlideIndices = arr
+      .map((item, i) => (item.t === "NewSlide" ? i : -1))
+      .filter((i) => i >= 0);
+    const config =
+      newSlideIndices.length > 0 ? arr.slice(0, newSlideIndices[0]) : arr;
+    const slides: any[][] = [];
+    for (let i = 0; i < newSlideIndices.length - 1; i++) {
+      slides.push(
+        arr.slice(newSlideIndices[i] + 1, newSlideIndices[i + 1])
+      );
+    }
+    if (newSlideIndices.length > 0) {
+      slides.push(arr.slice(newSlideIndices[newSlideIndices.length - 1] + 1));
+    }
+    const pdfpcObj: any = {
+      pdfpcFormat: 2,
+      disableMarkdown: false,
+    };
+    for (const item of config) {
+      const key = item.t.charAt(0).toLowerCase() + item.t.slice(1);
+      pdfpcObj[key] = item.v;
+    }
+    const pages: any[] = [];
+    for (const slide of slides) {
+      const page: any = {
+        idx: 0,
+        label: "1",
+        overlay: 0,
+        forcedOverlay: false,
+        hidden: false,
+      };
+      for (const item of slide) {
+        if (item.t === "Idx") {
+          page.idx = item.v;
+        } else if (item.t === "LogicalSlide") {
+          page.label = String(item.v);
+        } else if (item.t === "Overlay") {
+          page.overlay = item.v;
+          page.forcedOverlay = item.v > 0;
+        } else if (item.t === "HiddenSlide") {
+          page.hidden = true;
+        } else if (item.t === "SaveSlide") {
+          if (!("savedSlide" in pdfpcObj)) {
+            pdfpcObj.savedSlide = Number(page.label) - 1;
+          }
+        } else if (item.t === "EndSlide") {
+          if (!("endSlide" in pdfpcObj)) {
+            pdfpcObj.endSlide = Number(page.label) - 1;
+          }
+        } else if (item.t === "Note") {
+          page.note = item.v;
+        } else {
+          const key = item.t.charAt(0).toLowerCase() + item.t.slice(1);
+          pdfpcObj[key] = item.v;
+        }
+      }
+      pages.push(page);
+    }
+    pdfpcObj.pages = pages;
+    return pdfpcObj;
   }
 };
 
