@@ -12,7 +12,8 @@ const DEFAULT_DEV_MODE = "slide";
 // const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";
 // const TEST_PATH = "@http/localhost:11449/localhost.typ";
 // const TEST_PATH = "@any/localhost:3000/jan/test/src/branch/main/test.typ";
-const TEST_PATH = "touying-typ/touying/blob/main/examples/simple.typ";
+// const TEST_PATH = "touying-typ/touying/blob/main/examples/simple.typ";
+const TEST_PATH = "touying-typ/touying/blob/main/examples/example.typ";
 // const TEST_PATH = "Jollywatt/typst-fletcher/blob/main/docs/manual.typ";
 
 const DEFAULT_PAGE = "1";

@@ -208,162 +208,14 @@ export const DirectoryView = async ({
     case "github":
     /* fallthrough */
     case "forgejo": {
-      // storage.corsUrl(h.url);
-
-      const add: string[] = [];
-      const del: string[] = [];
-
-      try {
-        const req = indexedDB.open("gistd-git-meta", 1);
-        remoteFsLoaded.val = false;
-        req.onupgradeneeded = (event) => {
-          const db = (event.target as any).result;
-          db.createObjectStore(`igit-meta`);
-        };
-        const idb = await promisifiedReq<IDBDatabase>(req);
-        let meta: IDBObjectStore;
-
-        const cacheKey = `gistd-git-${storage.remoteUrl()}$$[${
-          storage.spec.ref
-        }]`;
-        const tx = idb.transaction([`igit-meta`], "readwrite");
-        meta = tx.objectStore(`igit-meta`);
-        const oldMeta = await promisifiedReq<{
-          db: string;
-          ttl: number;
-          loaded: boolean;
-        }>(meta.get(cacheKey));
-        remoteFsLoaded.val = oldMeta?.loaded;
-        await promisifiedReq(
-          meta.put(
-            {
-              db: cacheKey,
-              ttl: refreshDate(),
-              loaded: remoteFsLoaded.val,
-            },
-            cacheKey
-          )
-        );
-        tx.commit();
-
-        const fs = new LightningFS("fs", {
-          wipe: false,
-          fileDbName: cacheKey,
-          lockDbName: cacheKey,
-          fileStoreName: `igit-files`,
-          lockStoreName: `igit-lock`,
-        });
-        intoCompiler(async () => {
-          async function addPath(path: string) {
-            // read type
-            const type = await fs.promises.stat(path);
-            if (type.isDirectory()) {
-              for (const fileName of await fs.promises.readdir(path)) {
-                await addPath(
-                  path === "/" ? "/" + fileName : dirJoin(path, fileName)
-                );
-              }
-            } else {
-              const data = await fs.promises.readFile(path);
-              fsState.val = fsState.val!.add(path, data);
-            }
-          }
-
-          await addPath(projectDir);
-        });
-
-        await loadFromGit(
-          storage,
-          async (h: GitHttpRequest) => {
-            h.url = storage.corsUrl(h.url);
-            console.log("request", h.url);
-            return await request(h);
-          },
-          fs
-        )
-          .then(() => {
-            remoteFsLoaded.val = true;
-            return true;
-          })
-          .catch((e) => {
-            console.error(e);
-            error.val = `Failed to load git repository: ${e}`;
-            return (remoteFsLoaded.val = false);
-          });
-
-        const tx2 = idb.transaction([`igit-meta`], "readwrite");
-        meta = tx2.objectStore(`igit-meta`);
-        await promisifiedReq(
-          meta.put(
-            {
-              db: cacheKey,
-              ttl: refreshDate(),
-              loaded: remoteFsLoaded.val,
-            },
-            cacheKey
-          )
-        );
-        tx2.commit();
-        gc();
-        async function gc() {
-          const tx3 = idb.transaction([`igit-meta`], "readwrite");
-          meta = tx3.objectStore(`igit-meta`);
-          const cursor = meta.openCursor();
-          const now = Date.now();
-          const deleteFuts: Promise<[string, boolean]>[] = [];
-          cursor.onsuccess = async (event) => {
-            const cursor: IDBCursorWithValue | null = (event.target as any)
-              ?.result;
-            if (cursor) {
-              const value: {
-                db: string;
-                ttl: number;
-                loaded: boolean;
-              } = cursor?.value;
-              if (value.ttl < now) {
-                // delete entire db
-                deleteFuts.push(
-                  promisifiedReq<any>(indexedDB.deleteDatabase(value.db))
-                    .then(() => [value.db, true] as [string, boolean])
-                    .catch(() => {
-                      console.error("Failed to delete database", value.db);
-                      return [value.db, false] as [string, boolean];
-                    })
-                );
-                cursor.update({
-                  ...value,
-                  ttl: refreshDate(),
-                });
-              }
-              cursor.continue();
-            } else {
-              const deletedDbs = await Promise.all(deleteFuts);
-              for (const [db, deleted] of deletedDbs) {
-                if (deleted) {
-                  del.push(db);
-                } else {
-                  console.error("Failed to delete database", db);
-                }
-              }
-              console.log("git cache gc stage1:", add, del);
-              if (del.length > 0) {
-                gc2(del);
-              }
-            }
-          };
-        }
-        async function gc2(deletedDbs: string[]) {
-          const tx4 = idb.transaction([`igit-meta`], "readwrite");
-          meta = tx4.objectStore(`igit-meta`);
-          await Promise.all(
-            deletedDbs.map((key) => promisifiedReq(meta.delete(key)))
-          );
-          console.log("git cache stage2 done", deletedDbs);
-        }
-      } catch (e) {
-        console.error(e);
-        error.val = `Failed to load remote filesystem: ${e}`;
-      }
+      new GitLoader(
+        projectDir,
+        storage,
+        remoteFsLoaded,
+        fsState,
+        error,
+        intoCompiler
+      ).load();
       break;
     }
     case "http": {
@@ -412,6 +264,208 @@ export const DirectoryView = async ({
     });
   }
 };
+
+class GitLoader {
+  private cacheKey: string;
+  private fs: LightningFS;
+
+  constructor(
+    public projectDir: string,
+    public storage: GitHubStorageSpecExt | ForgejoStorageSpecExt,
+    public remoteFsLoaded: State<boolean>,
+    public fsState: State<FsState | undefined>,
+    public error: State<string>,
+    public intoCompiler: (loader: () => Promise<void>) => any
+  ) {
+    this.cacheKey = `gistd-git-${this.storage.remoteUrl()}$$[${
+      this.storage.spec.ref
+    }]`;
+    this.fs = this.createFs(false);
+    this.intoCompiler(async () => {
+      const addPath = async (path: string) => {
+        // read type
+        const type = await this.fs.promises.stat(path);
+        if (type.isDirectory()) {
+          for (const fileName of await this.fs.promises.readdir(path)) {
+            await addPath(
+              path === "/" ? "/" + fileName : dirJoin(path, fileName)
+            );
+          }
+        } else {
+          const data = await this.fs.promises.readFile(path);
+          this.fsState.val = this.fsState.val!.add(path, data);
+        }
+      };
+
+      await addPath(this.projectDir);
+    });
+  }
+
+  private createFs(wipe: boolean) {
+    return new LightningFS("fs", {
+      wipe,
+      fileDbName: this.cacheKey,
+      lockDbName: this.cacheKey,
+      fileStoreName: `igit-files`,
+      lockStoreName: `igit-lock`,
+    });
+  }
+
+  async load() {
+    // storage.corsUrl(h.url);
+
+    const add: string[] = [];
+    const del: string[] = [];
+
+    try {
+      const req = indexedDB.open("gistd-git-meta", 1);
+      this.remoteFsLoaded.val = false;
+      req.onupgradeneeded = (event) => {
+        const db = (event.target as any).result;
+        db.createObjectStore(`igit-meta`);
+      };
+      const idb = await promisifiedReq<IDBDatabase>(req);
+      let meta: IDBObjectStore;
+
+      /// Loads from local cache
+      const tx = idb.transaction([`igit-meta`], "readwrite");
+      meta = tx.objectStore(`igit-meta`);
+      const oldMeta = await promisifiedReq<{
+        db: string;
+        ttl: number;
+        loaded: boolean;
+      }>(meta.get(this.cacheKey));
+      this.remoteFsLoaded.val = oldMeta?.loaded;
+      await promisifiedReq(
+        meta.put(
+          {
+            db: this.cacheKey,
+            ttl: refreshDate(),
+            loaded: this.remoteFsLoaded.val,
+          },
+          this.cacheKey
+        )
+      );
+      tx.commit();
+
+      /// Loads from git
+      this.tryLoadFromGit()
+        .then(() => {
+          this.error.val = "";
+          return (this.remoteFsLoaded.val = true);
+        })
+        .catch((e) => {
+          console.error(e);
+          this.error.val = `Failed to load git repository: ${e}`;
+          return (this.remoteFsLoaded.val = false);
+        });
+
+      /// Updates metadata
+      const tx2 = idb.transaction([`igit-meta`], "readwrite");
+      meta = tx2.objectStore(`igit-meta`);
+      await promisifiedReq(
+        meta.put(
+          {
+            db: this.cacheKey,
+            ttl: refreshDate(),
+            loaded: this.remoteFsLoaded.val,
+          },
+          this.cacheKey
+        )
+      );
+      tx2.commit();
+
+      /// Updates cache
+      gc();
+      async function gc() {
+        const tx3 = idb.transaction([`igit-meta`], "readwrite");
+        meta = tx3.objectStore(`igit-meta`);
+        const cursor = meta.openCursor();
+        const now = Date.now();
+        const deleteFuts: Promise<[string, boolean]>[] = [];
+        cursor.onsuccess = async (event) => {
+          const cursor: IDBCursorWithValue | null = (event.target as any)
+            ?.result;
+          if (cursor) {
+            const value: {
+              db: string;
+              ttl: number;
+              loaded: boolean;
+            } = cursor?.value;
+            if (value.ttl < now) {
+              // delete entire db
+              deleteFuts.push(
+                promisifiedReq<any>(indexedDB.deleteDatabase(value.db))
+                  .then(() => [value.db, true] as [string, boolean])
+                  .catch(() => {
+                    console.error("Failed to delete database", value.db);
+                    return [value.db, false] as [string, boolean];
+                  })
+              );
+              cursor.update({
+                ...value,
+                ttl: refreshDate(),
+              });
+            }
+            cursor.continue();
+          } else {
+            const deletedDbs = await Promise.all(deleteFuts);
+            for (const [db, deleted] of deletedDbs) {
+              if (deleted) {
+                del.push(db);
+              } else {
+                console.error("Failed to delete database", db);
+              }
+            }
+            console.log("git cache gc stage1:", add, del);
+            if (del.length > 0) {
+              gc2(del);
+            }
+          }
+        };
+      }
+      async function gc2(deletedDbs: string[]) {
+        const tx4 = idb.transaction([`igit-meta`], "readwrite");
+        meta = tx4.objectStore(`igit-meta`);
+        await Promise.all(
+          deletedDbs.map((key) => promisifiedReq(meta.delete(key)))
+        );
+        console.log("git cache stage2 done", deletedDbs);
+      }
+    } catch (e) {
+      console.error(e);
+      this.error.val = `Failed to load remote filesystem: ${e}`;
+    }
+  }
+
+  private async loadFromGit() {
+    await loadFromGit(
+      this.storage,
+      async (h: GitHttpRequest) => {
+        h.url = this.storage.corsUrl(h.url);
+        console.log("request", h.url);
+        return await request(h);
+      },
+      this.fs
+    );
+  }
+
+  private async tryLoadFromGit() {
+    try {
+      await this.loadFromGit();
+    } catch (e) {
+      if (e instanceof git.Errors.CheckoutConflictError) {
+        console.warn(e);
+        this.fs = this.createFs(true);
+        /// Loads again once.
+        await this.loadFromGit();
+        return;
+      }
+
+      throw e;
+    }
+  }
+}
 
 async function loadFromGit(
   storage: GitHubStorageSpecExt | ForgejoStorageSpecExt,
