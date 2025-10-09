@@ -78,7 +78,7 @@ const FsItem =
   };
 
 class FsState {
-  private constructor(
+  constructor(
     public pathSet: Map<string, FsItemState>,
     public fsList: FsItemState[]
   ) {}
@@ -119,7 +119,7 @@ export const DirectoryView = async ({
   /// Capture compiler load status
   const remoteFsLoaded = van.state(false);
   const loaded = van.state(false);
-  const fsState = van.state<FsState | undefined>(undefined);
+  const fsState = van.state(new FsState(new Map<string, FsItemState>(), []));
 
   /// Internal fields
   const projectDir = "/";
