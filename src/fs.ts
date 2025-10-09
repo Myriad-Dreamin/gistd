@@ -40,12 +40,6 @@ const bufferToBase64Url = async (data: Uint8Array) => {
   return base64url;
 };
 
-async function base64UrlToBuffer(base64Url: string) {
-  const res = await fetch(base64Url);
-  const buffer = await res.arrayBuffer();
-  return new Uint8Array(buffer);
-}
-
 export class FsItemState {
   constructor(
     public path: string,
@@ -84,44 +78,10 @@ const FsItem =
   };
 
 class FsState {
-  public static saveLocalStorage: boolean = false;
   private constructor(
     public pathSet: Map<string, FsItemState>,
     public fsList: FsItemState[]
   ) {}
-
-  async save() {
-    if (!FsState.saveLocalStorage) return;
-    console.log("save local edition state");
-    localStorage.setItem(
-      "fsState",
-      JSON.stringify(await Promise.all(this.fsList.map((t) => t.serialize())))
-    );
-  }
-
-  static readonly load = async () => {
-    const x = new Map<string, FsItemState>();
-    if (!FsState.saveLocalStorage) return new FsState(x, []);
-    const y = (
-      await Promise.all(
-        JSON.parse(localStorage.getItem("fsState") ?? "[]").map(
-          async (t: any) => {
-            if (x.has(t.path)) {
-              return;
-            }
-            const s = new FsItemState(
-              t.path,
-              van.state(await base64UrlToBuffer(t.data)),
-              van.state(false)
-            );
-            x.set(t.path, s);
-            return s;
-          }
-        )
-      )
-    ).filter((t) => t);
-    return new FsState(x, y);
-  };
 
   add(path: string, data: Uint8Array) {
     const prev = this.pathSet.get(path);
@@ -158,15 +118,11 @@ export const DirectoryView = async ({
 }: DirectoryViewState) => {
   /// Capture compiler load status
   const remoteFsLoaded = van.state(false);
-  const localStorageLoaded = van.state(false);
   const loaded = van.state(false);
   const fsState = van.state<FsState | undefined>(undefined);
 
   /// Internal fields
   const projectDir = "/";
-
-  /// Store localstorage data whenver fs state changes
-  van.derive(() => fsState.val?.save());
 
   /// Reload all files to compiler and application
   const reloadAll = async (state: FsState) => {
@@ -183,25 +139,6 @@ export const DirectoryView = async ({
     console.log("found?", focusFile.val, "focusFile", state.fsList);
     changeFocusFile.val = focusFile.val?.clone();
   };
-
-  /// Task: load localstorage data to fs state
-  (async () => {
-    fsState.val = await FsState.load();
-  })();
-  van.derive(async () => {
-    if (
-      loaded.val ||
-      localStorageLoaded.val ||
-      !(compilerLoaded.val && fsState.val)
-    ) {
-      return;
-    }
-    localStorageLoaded.val = true;
-
-    reloadAll(fsState.val);
-    console.log("localstorage fs done");
-    reloadBell.val = true;
-  });
 
   /// Task: load remote data to fs
   switch (storage.type) {
