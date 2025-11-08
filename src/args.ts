@@ -6,7 +6,7 @@ import {
 import { README, README_CN } from "./storage";
 
 // @ts-ignore
-const isDev = true; // import.meta.env !== undefined;
+const isDev = false; // import.meta.env !== undefined;
 const DEFAULT_DEV_MODE = "doc";
 // const TEST_PATH = "typst/templates/blob/main/charged-ieee/template/main.typ";
 const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";

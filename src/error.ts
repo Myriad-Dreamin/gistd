@@ -1,4 +1,4 @@
-import { DiagnosticsData } from "@myriaddreamin/typst.ts/compiler";
+import { DiagnosticsData } from "typst.ts-0.14/compiler";
 import van from "vanjs-core";
 import type { ChildDom, State } from "vanjs-core";
 const { div } = van.tags;

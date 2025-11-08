@@ -37,8 +37,12 @@ test("redirect to README", () => {
 });
 
 test("@any for raw", () => {
-  expect(storageSpecFromPath("@http/localhost:11449/main.typ", "g-cors=false"))
-    .toMatchInlineSnapshot(`
+  expect(
+    storageSpecFromPath(
+      "@http/localhost:11449/main.typ",
+      new URLSearchParams("g-cors=false")
+    )
+  ).toMatchInlineSnapshot(`
       {
         "cors": false,
         "type": "http",
