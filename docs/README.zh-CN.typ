@@ -140,5 +140,5 @@ https://any-gistd-cn.myriad-dreamin.com/github.com/typst/templates/blob/main/cha
 ] else [
   = Typst版本
 
-  这个文档由 typst v#sys.version 编译
+  这个文档由 typst v#sys.version 编译。
 ]
