@@ -61,6 +61,8 @@ These URL parameters can change the behavior of gistd.
 - `g-mode`: The mode to display.
   - `doc`: View the document in the document mode.
   - `slide`: View the document in the slide mode.
+- `g-version`: The typst compiler version to use.
+  - Could be `v0.13.0`, `v0.14.0`, or `latest`.
 
 = Slide View
 
@@ -135,4 +137,8 @@ For example, to load a document at `http://localhost:11449/main.typ`:
   ```
   pnpm build
   ```
+] else [
+  = Using Typst Version
+
+  This document is compiled with typst v#sys.version
 ]

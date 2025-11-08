@@ -2,10 +2,10 @@ import van, { State } from "vanjs-core";
 import type {
   TypstRenderer,
   RenderSession,
-} from "@myriaddreamin/typst.ts/dist/esm/renderer.mjs";
+} from "typst.ts-0.14/dist/esm/renderer.mjs";
 import { TypstDomDocument } from "./dom";
-import { MountDomOptions } from "@myriaddreamin/typst.ts/dist/esm/options.render.mjs";
-import { RenderInSessionOptions } from "@myriaddreamin/typst.ts/dist/esm/options.render.mjs";
+import { MountDomOptions } from "typst.ts-0.14/dist/esm/options.render.mjs";
+import { RenderInSessionOptions } from "typst.ts-0.14/dist/esm/options.render.mjs";
 
 const { div } = van.tags;
 

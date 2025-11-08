@@ -2,9 +2,9 @@
   const e = `https://cdn.jsdelivr.net/npm`;
   const ns = `@myriaddreamin`;
   const tsConfig = {
-    lib: `${e}/${ns}/typst.ts@v0.6.1-rc3/dist/esm/contrib/all-in-one-lite.bundle.js`,
-    compilerModule: `${e}/${ns}/typst-ts-web-compiler@v0.6.1-rc3/pkg/typst_ts_web_compiler_bg.wasm`,
-    rendererModule: `${e}/${ns}/typst-ts-renderer@v0.6.1-rc3/pkg/typst_ts_renderer_bg.wasm`,
+    lib: `${e}/${ns}/typst.ts@v0.6.1-rc4/dist/esm/contrib/all-in-one-lite.bundle.js`,
+    compilerModule: `${e}/${ns}/typst-ts-web-compiler@v0.6.1-rc4/pkg/typst_ts_web_compiler_bg.wasm`,
+    rendererModule: `${e}/${ns}/typst-ts-renderer@v0.6.1-rc4/pkg/typst_ts_renderer_bg.wasm`,
   };
   window.$typst$script = new Promise((resolve) => {
     const head = document.getElementsByTagName("head")[0];

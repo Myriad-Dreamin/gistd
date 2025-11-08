@@ -11,18 +11,27 @@ importers:
       '@isomorphic-git/lightning-fs':
         specifier: ^4.6.2
         version: 4.6.2
-      '@myriaddreamin/typst-ts-renderer':
-        specifier: 0.6.1-rc3
-        version: 0.6.1-rc3
-      '@myriaddreamin/typst-ts-web-compiler':
-        specifier: 0.6.1-rc3
-        version: 0.6.1-rc3
-      '@myriaddreamin/typst.ts':
-        specifier: 0.6.1-rc3
-        version: 0.6.1-rc3(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3)
       isomorphic-git:
         specifier: ^1.33.1
         version: 1.33.1
+      typst-ts-compiler-0.13:
+        specifier: npm:@myriaddreamin/typst-ts-web-compiler@0.6.1-rc4
+        version: '@myriaddreamin/typst-ts-web-compiler@0.6.1-rc4'
+      typst-ts-compiler-0.14:
+        specifier: npm:@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1
+        version: '@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1'
+      typst-ts-renderer-0.13:
+        specifier: npm:@myriaddreamin/typst-ts-renderer@0.6.1-rc4
+        version: '@myriaddreamin/typst-ts-renderer@0.6.1-rc4'
+      typst-ts-renderer-0.14:
+        specifier: npm:@myriaddreamin/typst-ts-renderer@0.7.0-rc1
+        version: '@myriaddreamin/typst-ts-renderer@0.7.0-rc1'
+      typst.ts-0.13:
+        specifier: npm:@myriaddreamin/typst.ts@0.6.1-rc4
+        version: '@myriaddreamin/typst.ts@0.6.1-rc4(@myriaddreamin/typst-ts-renderer@0.7.0-rc1)(@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1)'
+      typst.ts-0.14:
+        specifier: npm:@myriaddreamin/typst.ts@0.7.0-rc1
+        version: '@myriaddreamin/typst.ts@0.7.0-rc1(@myriaddreamin/typst-ts-renderer@0.7.0-rc1)(@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1)'
       vanjs-core:
         specifier: ^1.5.5
         version: 1.5.5
@@ -211,17 +220,34 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
-  '@myriaddreamin/typst-ts-renderer@0.6.1-rc3':
-    resolution: {integrity: sha512-m4OHUXYvxDcE6yEvTIl+s7Y721RMWpVTUDXRN2o08P2ckkgxmtloVwHkdCAbrV5w19b5f/fcSaCW2xbxaw+XnA==}
+  '@myriaddreamin/typst-ts-renderer@0.6.1-rc4':
+    resolution: {integrity: sha512-YelKI+SQNDxGR82eB3CJg4QLDx0BNYYBtUDD57pAOmmS0OliwYL77RjhuEAH4hZwm13+5pUVbX+Xic8q6BZrqQ==}
 
-  '@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3':
-    resolution: {integrity: sha512-6KD2QKUI1KVcBpKxh/LQX02224NnjMWlRQy/IqtROekDKUdoCoSlf5PV7aETYyI4bA1mtNrzMkBGdCeum/4frA==}
+  '@myriaddreamin/typst-ts-renderer@0.7.0-rc1':
+    resolution: {integrity: sha512-Dd0xP0THKiUwYVTX+2FW4gzBl4i3BNWLAO/ZAReSCkbaPiFb6py5heSvXX0vtH8sXsFQOB3qhxz68sEcq9oRKg==}
 
-  '@myriaddreamin/typst.ts@0.6.1-rc3':
-    resolution: {integrity: sha512-pGzaJ5SV0JjrNWn14Bicy0nPTtfD5+4kHwGUDYSebSMbfAtNHfi+Et7k4PiXqunwRm7Obkk5iZufiRM2jOlfbg==}
+  '@myriaddreamin/typst-ts-web-compiler@0.6.1-rc4':
+    resolution: {integrity: sha512-92E7WN2yVWwaCU47RMGL8r3RcPg84MaFoJNv42lvjt3HtLXnuHU1K+3tbiFlx9DZvZXHNf819s9bAt19mDfqSg==}
+
+  '@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1':
+    resolution: {integrity: sha512-ICSdiR6U0GH1wqDKRYpvVWV9TBmA0kD0IPQwl0f2BhlHj4qrOPtC5GfSXGxzRiGNUou/Mhr9V8f2wgzBIp4P4Q==}
+
+  '@myriaddreamin/typst.ts@0.6.1-rc4':
+    resolution: {integrity: sha512-kqs974gROP400W0RK31RAkLDDBu+s8LgjBVAxMxM+LFgsdKWYxHIhvSCtsRr9HerZzof+KMwTw6QAuDUzCHl9Q==}
     peerDependencies:
-      '@myriaddreamin/typst-ts-renderer': ^0.6.1-rc3
-      '@myriaddreamin/typst-ts-web-compiler': ^0.6.1-rc3
+      '@myriaddreamin/typst-ts-renderer': ^0.6.1-rc4
+      '@myriaddreamin/typst-ts-web-compiler': ^0.6.1-rc4
+    peerDependenciesMeta:
+      '@myriaddreamin/typst-ts-renderer':
+        optional: true
+      '@myriaddreamin/typst-ts-web-compiler':
+        optional: true
+
+  '@myriaddreamin/typst.ts@0.7.0-rc1':
+    resolution: {integrity: sha512-IZ78l1iLTMM61pf1SmqtojkgM2aloQVSzlNvStKtYu+qleOEzh/ph7zTNmfM8j5vlflCkos85E+UKQvLdC9C7Q==}
+    peerDependencies:
+      '@myriaddreamin/typst-ts-renderer': ^0.7.0-rc1
+      '@myriaddreamin/typst-ts-web-compiler': ^0.7.0-rc1
     peerDependenciesMeta:
       '@myriaddreamin/typst-ts-renderer':
         optional: true
@@ -969,16 +995,27 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
-  '@myriaddreamin/typst-ts-renderer@0.6.1-rc3': {}
+  '@myriaddreamin/typst-ts-renderer@0.6.1-rc4': {}
 
-  '@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3': {}
+  '@myriaddreamin/typst-ts-renderer@0.7.0-rc1': {}
 
-  '@myriaddreamin/typst.ts@0.6.1-rc3(@myriaddreamin/typst-ts-renderer@0.6.1-rc3)(@myriaddreamin/typst-ts-web-compiler@0.6.1-rc3)':
+  '@myriaddreamin/typst-ts-web-compiler@0.6.1-rc4': {}
+
+  '@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1': {}
+
+  '@myriaddreamin/typst.ts@0.6.1-rc4(@myriaddreamin/typst-ts-renderer@0.7.0-rc1)(@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1)':
     dependencies:
       idb: 7.1.1
     optionalDependencies:
-      '@myriaddreamin/typst-ts-renderer': 0.6.1-rc3
-      '@myriaddreamin/typst-ts-web-compiler': 0.6.1-rc3
+      '@myriaddreamin/typst-ts-renderer': 0.7.0-rc1
+      '@myriaddreamin/typst-ts-web-compiler': 0.7.0-rc1
+
+  '@myriaddreamin/typst.ts@0.7.0-rc1(@myriaddreamin/typst-ts-renderer@0.7.0-rc1)(@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1)':
+    dependencies:
+      idb: 7.1.1
+    optionalDependencies:
+      '@myriaddreamin/typst-ts-renderer': 0.7.0-rc1
+      '@myriaddreamin/typst-ts-web-compiler': 0.7.0-rc1
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

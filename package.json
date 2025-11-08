@@ -24,9 +24,12 @@
   },
   "dependencies": {
     "@isomorphic-git/lightning-fs": "^4.6.2",
-    "@myriaddreamin/typst-ts-renderer": "0.6.1-rc3",
-    "@myriaddreamin/typst-ts-web-compiler": "0.6.1-rc3",
-    "@myriaddreamin/typst.ts": "0.6.1-rc3",
+    "typst.ts-0.13": "npm:@myriaddreamin/typst.ts@0.6.1-rc4",
+    "typst-ts-renderer-0.13": "npm:@myriaddreamin/typst-ts-renderer@0.6.1-rc4",
+    "typst-ts-compiler-0.13": "npm:@myriaddreamin/typst-ts-web-compiler@0.6.1-rc4",
+    "typst.ts-0.14": "npm:@myriaddreamin/typst.ts@0.7.0-rc1",
+    "typst-ts-renderer-0.14": "npm:@myriaddreamin/typst-ts-renderer@0.7.0-rc1",
+    "typst-ts-compiler-0.14": "npm:@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1",
     "isomorphic-git": "^1.33.1",
     "vanjs-core": "^1.5.5"
   }

@@ -1,18 +1,18 @@
 import type {
   IncrDomDocClient,
   TypstRenderer as RsTypstRenderer,
-} from "@myriaddreamin/typst-ts-renderer";
-import { kObject } from "@myriaddreamin/typst.ts/internal.types";
-import type { TypstRenderer } from "@myriaddreamin/typst.ts/renderer";
+} from "typst-ts-renderer-0.14";
+import { kObject } from "typst.ts-0.14/internal.types";
+import type { TypstRenderer } from "typst.ts-0.14/renderer";
 import {
   GConstructor,
   TypstDocumentContext,
   composeDoc,
   provideDoc,
-} from "@myriaddreamin/typst.ts/contrib/dom/typst-doc";
-import { TypstCancellationToken } from "@myriaddreamin/typst.ts/contrib/dom/typst-cancel";
+} from "typst.ts-0.14/contrib/dom/typst-doc";
+import { TypstCancellationToken } from "typst.ts-0.14/contrib/dom/typst-cancel";
 import van, { State } from "vanjs-core";
-import { PreviewMode } from "@myriaddreamin/typst.ts/dist/esm/contrib/dom/typst-doc.mjs";
+import { PreviewMode } from "typst.ts-0.14/dist/esm/contrib/dom/typst-doc.mjs";
 
 const animationFrame = () =>
   new Promise((resolve) => requestAnimationFrame(resolve));

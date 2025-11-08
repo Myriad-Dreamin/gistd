@@ -61,6 +61,8 @@ https://gistd-cn.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/templ
 - `g-mode`: 显示模式。
   - `doc`: 显示为普通文档。
   - `slide`: 显示为幻灯片。
+- `g-version`: 所使用的 Typst 编译器版本。
+  - 合法值为：`v0.13.0`, `v0.14.0`或`latest`。
 
 == 幻灯片模式
 
@@ -135,4 +137,8 @@ https://any-gistd-cn.myriad-dreamin.com/github.com/typst/templates/blob/main/cha
   ```
   pnpm build
   ```
+] else [
+  = Typst版本
+
+  这个文档由 typst v#sys.version 编译
 ]

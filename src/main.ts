@@ -8,7 +8,7 @@ import { TypstDocument, Doc } from "./doc";
 import { argsFromUrl } from "./args";
 import { getFontProvider } from "./font";
 import { ErrorPanel, DiagnosticMessage } from "./error";
-import type { TypstCompiler } from "@myriaddreamin/typst.ts";
+import type { TypstCompiler } from "typst.ts-0.14";
 
 let $typst = window.$typst;
 
@@ -17,12 +17,35 @@ const isDarkMode = () =>
   window.matchMedia?.("(prefers-color-scheme: dark)").matches;
 
 /// Exports the document
-const ExportButton = (title: string, onclick: () => void) =>
+const ExportButton = (title: string, content: string, onclick: () => void) =>
   button({
     onclick,
-    textContent: title,
+    title,
+    textContent: content,
   });
 
+const PermalinkButton = () =>
+  button({
+    title: "Copy As PermaLink",
+    textContent: "PermaLink",
+    onclick: async () => {
+      const args = await argsFromUrl();
+      const search = new URLSearchParams(window.location.search || "");
+      search.set(
+        "g-version",
+        (() => {
+          switch (args.version) {
+            case "v0.13.0":
+            case "v0.14.0":
+              return args.version;
+            default:
+              return "v0.14.0";
+          }
+        })()
+      );
+      window.location.search = search.toString();
+    },
+  });
 const ModeButton = (mode: "slide" | "doc") =>
   button({
     textContent: mode.charAt(0).toUpperCase() + mode.slice(1),
@@ -73,7 +96,9 @@ const pageControls = ({
         onclick: () => {
           page.val = 1;
         },
-        textContent: van.derive(() => `${Math.min(page.val, maxPage.val)} / ${maxPage.val}`),
+        textContent: van.derive(
+          () => `${Math.min(page.val, maxPage.val)} / ${maxPage.val}`
+        ),
       }),
       button({
         onclick: () => {
@@ -140,10 +165,10 @@ const App = () => {
 
   const initializeLabelIndices = () => {
     if (!pdfpc.val || !pdfpc.val.pages) return;
-    
+
     const firstIdx: Record<string, number> = {};
     const currentIdx: Record<string, number> = {};
-    
+
     // Find first occurrence of each label
     pdfpc.val.pages.forEach((page: any, idx: number) => {
       const label = page.label;
@@ -152,7 +177,7 @@ const App = () => {
         currentIdx[label] = idx; // Initialize current to first
       }
     });
-    
+
     labelFirstIdx.val = firstIdx;
     labelCurrentIdx.val = currentIdx;
   };
@@ -302,7 +327,10 @@ const App = () => {
       const pages = pdfpc.val.pages;
       if (currentIdx >= 0 && currentIdx < pages.length) {
         const currentLabel = pages[currentIdx].label;
-        labelCurrentIdx.val = { ...labelCurrentIdx.val, [currentLabel]: currentIdx };
+        labelCurrentIdx.val = {
+          ...labelCurrentIdx.val,
+          [currentLabel]: currentIdx,
+        };
       }
     }
   });
@@ -351,26 +379,35 @@ const App = () => {
       }
     });
 
-    const getNextPageByLabel = (currentPage: number, direction: 'next' | 'prev'): number => {
+    const getNextPageByLabel = (
+      currentPage: number,
+      direction: "next" | "prev"
+    ): number => {
       if (!pdfpc.val || !pdfpc.val.pages) {
-        return direction === 'next' ? currentPage + 1 : currentPage - 1;
+        return direction === "next" ? currentPage + 1 : currentPage - 1;
       }
       const pages = pdfpc.val.pages;
       const currentIdx = currentPage - 1; // page.val from 1, idx from 0
       if (currentIdx < 0 || currentIdx >= pages.length) {
-        return direction === 'next' ? currentPage + 1 : currentPage - 1;
+        return direction === "next" ? currentPage + 1 : currentPage - 1;
       }
       const currentLabel = pages[currentIdx].label;
 
       // Record current label's idx
-      labelCurrentIdx.val = { ...labelCurrentIdx.val, [currentLabel]: currentIdx };
+      labelCurrentIdx.val = {
+        ...labelCurrentIdx.val,
+        [currentLabel]: currentIdx,
+      };
 
-      if (direction === 'next') {
+      if (direction === "next") {
         for (let i = currentIdx + 1; i < pages.length; i++) {
           if (pages[i].label !== currentLabel) {
             const targetLabel = pages[i].label;
             // Return to last visited idx of this label, or first occurrence if never visited
-            const visitedIdx = labelCurrentIdx.val[targetLabel] ?? labelFirstIdx.val[targetLabel] ?? i;
+            const visitedIdx =
+              labelCurrentIdx.val[targetLabel] ??
+              labelFirstIdx.val[targetLabel] ??
+              i;
             return visitedIdx + 1; // back to 1-based
           }
         }
@@ -380,7 +417,10 @@ const App = () => {
           if (pages[i].label !== currentLabel) {
             const targetLabel = pages[i].label;
             // Return to last visited idx of this label, or first occurrence if never visited
-            const visitedIdx = labelCurrentIdx.val[targetLabel] ?? labelFirstIdx.val[targetLabel] ?? i;
+            const visitedIdx =
+              labelCurrentIdx.val[targetLabel] ??
+              labelFirstIdx.val[targetLabel] ??
+              i;
             return visitedIdx + 1; // back to 1-based
           }
         }
@@ -391,12 +431,12 @@ const App = () => {
     window.addEventListener("keydown", (e) => {
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        const nextPage = getNextPageByLabel(page.val, 'prev');
+        const nextPage = getNextPageByLabel(page.val, "prev");
         page.val = Math.max(Math.min(nextPage, maxPage.val), 1);
       }
       if (e.key === "ArrowRight") {
         e.preventDefault();
-        const nextPage = getNextPageByLabel(page.val, 'next');
+        const nextPage = getNextPageByLabel(page.val, "next");
         page.val = Math.max(Math.min(nextPage, maxPage.val), 1);
       }
       if (e.key === "ArrowUp") {
@@ -475,10 +515,12 @@ const App = () => {
         ...fullScreenButton(mode),
         ...pageControls({ page, maxPage, mode }),
 
-        ModeButton(mode),
-
-        ExportButton("Settings", () => alert("Not implemented")),
-        ExportButton("Export to PDF", exportPdf)
+        ExportButton("Compilation Settings", "Settings", () =>
+          alert("Not implemented")
+        ),
+        ExportButton("Export To PDF", "PDF", exportPdf),
+        PermalinkButton(),
+        ModeButton(mode)
         // div({ style: "width: 5px" }),
         // ExportButton("HTML", exportHtml)
       )
@@ -529,9 +571,7 @@ const App = () => {
       newSlideIndices.length > 0 ? arr.slice(0, newSlideIndices[0]) : arr;
     const slides: any[][] = [];
     for (let i = 0; i < newSlideIndices.length - 1; i++) {
-      slides.push(
-        arr.slice(newSlideIndices[i] + 1, newSlideIndices[i + 1])
-      );
+      slides.push(arr.slice(newSlideIndices[i] + 1, newSlideIndices[i + 1]));
     }
     if (newSlideIndices.length > 0) {
       slides.push(arr.slice(newSlideIndices[newSlideIndices.length - 1] + 1));
