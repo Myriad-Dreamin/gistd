@@ -62,7 +62,7 @@ These URL parameters can change the behavior of gistd.
   - `doc`: View the document in the document mode.
   - `slide`: View the document in the slide mode.
 - `g-version`: The typst compiler version to use.
-  - Could be `v0.13.0`, `v0.14.0`, or `latest`.
+  - Could be `v0.13.0`, `v0.13.1`, `v0.14.0`, or `latest`.
 
 = Slide View
 

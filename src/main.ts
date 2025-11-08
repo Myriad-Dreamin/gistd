@@ -36,6 +36,7 @@ const PermalinkButton = () =>
         (() => {
           switch (args.version) {
             case "v0.13.0":
+            case "v0.13.1":
             case "v0.14.0":
               return args.version;
             default:

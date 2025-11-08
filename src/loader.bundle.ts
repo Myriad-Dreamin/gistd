@@ -10,7 +10,8 @@ import compiler014 from "typst-ts-compiler-0.14/wasm?url";
 
 const getConfig = async (v: string) => {
   switch (v) {
-    case "v0.13.0": {
+    case "v0.13.0":
+    case "v0.13.1": {
       const ts = import("typst.ts-0.13");
       const optionInit = import("typst.ts-0.13/options.init");
       const compilerWrapper = import("typst-ts-compiler-0.13");
@@ -51,7 +52,7 @@ const getConfig = async (v: string) => {
 
     default: {
       throw new Error(
-        `invalid version: ${v}, expected "v0.13.0", "v0.14.0", or "latest"`
+        `invalid version: ${v}, expected "v0.13.0", "v0.13.1", "v0.14.0", or "latest"`
       );
     }
   }

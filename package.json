@@ -24,9 +24,9 @@
   },
   "dependencies": {
     "@isomorphic-git/lightning-fs": "^4.6.2",
-    "typst.ts-0.13": "npm:@myriaddreamin/typst.ts@0.6.1-rc4",
-    "typst-ts-renderer-0.13": "npm:@myriaddreamin/typst-ts-renderer@0.6.1-rc4",
-    "typst-ts-compiler-0.13": "npm:@myriaddreamin/typst-ts-web-compiler@0.6.1-rc4",
+    "typst.ts-0.13": "npm:@myriaddreamin/typst.ts@0.6.1-rc5",
+    "typst-ts-renderer-0.13": "npm:@myriaddreamin/typst-ts-renderer@0.6.1-rc5",
+    "typst-ts-compiler-0.13": "npm:@myriaddreamin/typst-ts-web-compiler@0.6.1-rc5",
     "typst.ts-0.14": "npm:@myriaddreamin/typst.ts@0.7.0-rc1",
     "typst-ts-renderer-0.14": "npm:@myriaddreamin/typst-ts-renderer@0.7.0-rc1",
     "typst-ts-compiler-0.14": "npm:@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1",

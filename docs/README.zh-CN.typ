@@ -62,7 +62,7 @@ https://gistd-cn.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/templ
   - `doc`: 显示为普通文档。
   - `slide`: 显示为幻灯片。
 - `g-version`: 所使用的 Typst 编译器版本。
-  - 合法值为：`v0.13.0`, `v0.14.0`或`latest`。
+  - 合法值为：`v0.13.0`, `v0.13.1`, `v0.14.0`或`latest`。
 
 == 幻灯片模式
 
