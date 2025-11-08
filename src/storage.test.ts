@@ -43,12 +43,12 @@ test("@any for raw", () => {
       new URLSearchParams("g-cors=false")
     )
   ).toMatchInlineSnapshot(`
-      {
-        "cors": false,
-        "type": "http",
-        "url": "http://localhost:11449/main.typ?g-cors=false",
-      }
-    `);
+    {
+      "cors": false,
+      "type": "http",
+      "url": "http://localhost:11449/main.typ",
+    }
+  `);
   expect(
     storageSpecFromPath(
       "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ"
