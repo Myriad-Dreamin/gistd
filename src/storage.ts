@@ -30,6 +30,7 @@ export type StorageSpec =
   | HttpStorageSpec;
 
 type CorsOption = string | boolean;
+const DEFAULT_CORS_PROXY = "/git-cors-proxy";
 
 export interface GitHubStorageSpec {
   type: "github";
@@ -284,7 +285,7 @@ export class HttpStorageSpecExt {
 
 export function corsUrl(url: string, cors: CorsOption) {
   if (cors === true) {
-    return `https://underleaf.mgt.workers.dev/?${url}`;
+    return `${DEFAULT_CORS_PROXY}/${url.replace(/^https?:\/\//, "")}`;
   } else if (cors === false) {
     return url;
   } else {

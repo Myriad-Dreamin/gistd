@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { createStorageSpecExt, storageSpecFromPath } from "./storage";
+import { corsUrl, createStorageSpecExt, storageSpecFromPath } from "./storage";
 
 test("redirect to README", () => {
   expect(storageSpecFromPath("")).toMatchInlineSnapshot(`
@@ -118,5 +118,27 @@ test("originUrl", () => {
   ).toBe("https://codeberg.org/typst/templates/src/main/main.typ");
   expect(test("@http/localhost:11449/localhost.typ")).toBe(
     "http://localhost:11449/localhost.typ"
+  );
+});
+
+test("default cors proxy uses same-origin path", () => {
+  expect(
+    corsUrl(
+      "https://github.com/Myriad-Dreamin/gistd.git/info/refs?service=git-upload-pack",
+      true
+    )
+  ).toBe(
+    "/git-cors-proxy/github.com/Myriad-Dreamin/gistd.git/info/refs?service=git-upload-pack"
+  );
+  expect(
+    corsUrl("https://github.com/Myriad-Dreamin/gistd/raw/main/README.typ", false)
+  ).toBe("https://github.com/Myriad-Dreamin/gistd/raw/main/README.typ");
+  expect(
+    corsUrl(
+      "https://github.com/Myriad-Dreamin/gistd.git/info/refs?service=git-upload-pack",
+      "http://localhost:9999"
+    )
+  ).toBe(
+    "http://localhost:9999/github.com/Myriad-Dreamin/gistd.git/info/refs?service=git-upload-pack"
   );
 });
