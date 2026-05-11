@@ -1,0 +1,73 @@
+name: gistd::site_health
+
+on:
+  schedule:
+    # GitHub Actions schedules use UTC. Run every 3 hours.
+    - cron: "0 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site:
+          - https://gistd.myriad-dreamin.com/
+          - https://gistd-cn.myriad-dreamin.com/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Check HTTP response
+        env:
+          SITE_URL: ${{ matrix.site }}
+        run: |
+          set -euo pipefail
+
+          body="$(mktemp)"
+          if ! http_status="$(
+            curl \
+              --location \
+              --silent \
+              --show-error \
+              --max-time 30 \
+              --retry 3 \
+              --retry-delay 10 \
+              --retry-all-errors \
+              --write-out "%{http_code}" \
+              --output "$body" \
+              "$SITE_URL"
+          )"; then
+            echo "::error title=Request failed::curl failed for $SITE_URL"
+            exit 1
+          fi
+
+          if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+            echo "::error title=Unexpected HTTP status::$SITE_URL returned $http_status"
+            sed -n "1,80p" "$body"
+            exit 1
+          fi
+
+          if ! grep -Fq '<div id="app"></div>' "$body"; then
+            echo "::error title=Unexpected app shell::$SITE_URL did not return the gistd app shell"
+            sed -n "1,80p" "$body"
+            exit 1
+          fi
+
+      - name: Check rendered app
+        env:
+          SITE_URL: ${{ matrix.site }}
+        run: node .github/scripts/check-site-health.mjs "$SITE_URL"
