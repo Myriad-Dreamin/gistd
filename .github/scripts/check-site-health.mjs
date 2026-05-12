@@ -41,25 +41,55 @@ chrome.stderr.on("data", (chunk) => {
   }
 });
 
+let chromeExited = false;
+const chromeExit = new Promise((resolve) => {
+  const markExited = () => {
+    chromeExited = true;
+    resolve();
+  };
+
+  chrome.once("exit", markExited);
+  chrome.once("error", markExited);
+});
+
 let cleanedUp = false;
-const cleanup = () => {
+const cleanup = async () => {
   if (cleanedUp) {
     return;
   }
   cleanedUp = true;
-  if (!chrome.killed) {
+
+  if (!chromeExited && !chrome.killed) {
     chrome.kill("SIGTERM");
   }
-  rmSync(userDataDir, { recursive: true, force: true });
+
+  if (!chromeExited) {
+    await Promise.race([chromeExit, delay(5000)]);
+  }
+
+  removeUserDataDir();
 };
 
-process.on("exit", cleanup);
-process.on("SIGINT", () => {
-  cleanup();
+const cleanupSync = () => {
+  if (cleanedUp) {
+    return;
+  }
+  cleanedUp = true;
+
+  if (!chromeExited && !chrome.killed) {
+    chrome.kill("SIGTERM");
+  }
+
+  removeUserDataDir();
+};
+
+process.on("exit", cleanupSync);
+process.on("SIGINT", async () => {
+  await cleanup();
   process.exit(130);
 });
-process.on("SIGTERM", () => {
-  cleanup();
+process.on("SIGTERM", async () => {
+  await cleanup();
   process.exit(143);
 });
 
@@ -94,14 +124,14 @@ try {
     `Rendered ${siteUrl}: title=${JSON.stringify(state.title)}, pages=${state.pageCount}`
   );
   client.close();
-  cleanup();
+  await cleanup();
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   if (chromeStderr.trim()) {
     console.error("\nChrome stderr:");
     console.error(chromeStderr.trim());
   }
-  cleanup();
+  await cleanup();
   process.exit(1);
 }
 
@@ -284,6 +314,20 @@ function formatRemoteObject(value) {
     return String(value.value);
   }
   return value.description || value.type;
+}
+
+function removeUserDataDir() {
+  try {
+    rmSync(userDataDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: failed to clean up ${userDataDir}: ${message}`);
+  }
 }
 
 function delay(ms) {
