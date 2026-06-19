@@ -60,7 +60,14 @@ test("resolves google-fonts provider through CSS conversion", async () => {
   `;
   const requests: string[] = [];
   const fetcher = async (url: string | URL | Request) => {
-    requests.push(url.toString());
+    const requestUrl = url.toString();
+    requests.push(requestUrl);
+    if (requestUrl.includes("api.github.com/repos/google/fonts/contents")) {
+      return new Response("not found", {
+        status: 404,
+        statusText: "Not Found",
+      });
+    }
     return new Response(css, {
       status: 200,
       statusText: "OK",
@@ -91,5 +98,68 @@ test("resolves google-fonts provider through CSS conversion", async () => {
       url: "https://fonts.gstatic.com/s/notosanssc/v40/chinese.woff2",
     },
   ]);
-  expect(requests).toEqual([googleFontsCssUrl("Noto Sans SC")]);
+  expect(requests).toEqual([
+    "https://api.github.com/repos/google/fonts/contents/ofl/notosanssc",
+    "https://api.github.com/repos/google/fonts/contents/apache/notosanssc",
+    "https://api.github.com/repos/google/fonts/contents/ufl/notosanssc",
+    googleFontsCssUrl("Noto Sans SC"),
+  ]);
+});
+
+test("resolves google-fonts provider through Google Fonts repository", async () => {
+  const requests: string[] = [];
+  const fetcher = async (url: string | URL | Request) => {
+    const requestUrl = url.toString();
+    requests.push(requestUrl);
+    if (requestUrl.endsWith("/ofl/notosanssc")) {
+      return Response.json([
+        {
+          name: "NotoSansSC[wght].ttf",
+          type: "file",
+          download_url:
+            "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+        },
+      ]);
+    }
+    return new Response("not found", {
+      status: 404,
+      statusText: "Not Found",
+    });
+  };
+
+  const fontInfo = await resolveConfiguredFontInfo(
+    [{ provider: "google-fonts", family: "Noto Sans SC:wght@400;700" }],
+    fetcher
+  );
+
+  expect(requests).toEqual([
+    "https://api.github.com/repos/google/fonts/contents/ofl/notosanssc",
+  ]);
+  expect(fontInfo).toHaveLength(1);
+  expect(fontInfo[0].url).toBe(
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf"
+  );
+  expect(fontInfo[0].conditions).toEqual([]);
+  expect(fontInfo[0].info).toEqual([
+    {
+      family: "Noto Sans SC",
+      variant: {
+        style: "normal",
+        weight: 400,
+        stretch: 1000,
+      },
+      flags: "",
+      coverage: [0, 0x110000],
+    },
+    {
+      family: "Noto Sans SC",
+      variant: {
+        style: "normal",
+        weight: 700,
+        stretch: 1000,
+      },
+      flags: "",
+      coverage: [0, 0x110000],
+    },
+  ]);
 });

@@ -11,6 +11,12 @@ interface RemoteFontInfo {
   url: string;
 }
 
+interface GoogleFontsRepositoryEntry {
+  name: string;
+  type: string;
+  download_url: string | null;
+}
+
 /**
  * Font cache
  */
@@ -123,6 +129,20 @@ async function resolveGoogleFonts(
   spec: GoogleFontsSpec,
   fetcher: typeof fetch
 ): Promise<RemoteFontInfo[]> {
+  try {
+    // Browser Google Fonts CSS resolves to woff2 subsets that typst.ts cannot
+    // currently turn into usable glyph output, so prefer repository TTF/OTF.
+    const repositoryFontInfo = await resolveGoogleFontsRepository(
+      spec,
+      fetcher
+    );
+    if (repositoryFontInfo.length > 0) {
+      return repositoryFontInfo;
+    }
+  } catch (err) {
+    console.warn("error resolving Google Fonts repository font", spec, err);
+  }
+
   const cssUrl = googleFontsCssUrl(spec.family);
   const response = await fetcher(cssUrl);
   if (!response.ok) {
@@ -132,6 +152,230 @@ async function resolveGoogleFonts(
   }
 
   return cssToFontInformation(await response.text(), { baseUrl: cssUrl });
+}
+
+async function resolveGoogleFontsRepository(
+  spec: GoogleFontsSpec,
+  fetcher: typeof fetch
+): Promise<RemoteFontInfo[]> {
+  const family = googleFontsFamilyName(spec.family);
+  const slug = googleFontsRepositorySlug(family);
+  if (!slug) {
+    return [];
+  }
+
+  const licenseDirs = ["ofl", "apache", "ufl"];
+  for (const licenseDir of licenseDirs) {
+    const entries = await fetchGoogleFontsRepositoryEntries(
+      `${licenseDir}/${slug}`,
+      fetcher
+    );
+    if (!entries) {
+      continue;
+    }
+
+    const fontEntries = repositoryFontEntries(entries);
+    if (fontEntries.length > 0) {
+      return repositoryEntriesToFontInfo(family, spec.family, fontEntries);
+    }
+
+    const staticDir = entries.find(
+      (entry) => entry.type === "dir" && entry.name === "static"
+    );
+    if (!staticDir) {
+      continue;
+    }
+
+    const staticEntries = await fetchGoogleFontsRepositoryEntries(
+      `${licenseDir}/${slug}/static`,
+      fetcher
+    );
+    const staticFontEntries = staticEntries
+      ? repositoryFontEntries(staticEntries)
+      : [];
+    if (staticFontEntries.length > 0) {
+      return repositoryEntriesToFontInfo(
+        family,
+        spec.family,
+        staticFontEntries
+      );
+    }
+  }
+
+  return [];
+}
+
+async function fetchGoogleFontsRepositoryEntries(
+  path: string,
+  fetcher: typeof fetch
+): Promise<GoogleFontsRepositoryEntry[] | undefined> {
+  const url = `https://api.github.com/repos/google/fonts/contents/${path}`;
+  const response = await fetcher(url, {
+    headers: {
+      accept: "application/vnd.github+json",
+    },
+  });
+
+  if (response.status === 404) {
+    return undefined;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `failed to fetch Google Fonts repository metadata: ${response.status} ${response.statusText}`
+    );
+  }
+
+  const entries = await response.json();
+  return Array.isArray(entries) ? entries : undefined;
+}
+
+function repositoryFontEntries(
+  entries: GoogleFontsRepositoryEntry[]
+): GoogleFontsRepositoryEntry[] {
+  return entries.filter(
+    (entry) =>
+      entry.type === "file" &&
+      Boolean(entry.download_url) &&
+      /\.(?:otf|ttf)$/i.test(entry.name)
+  );
+}
+
+function repositoryEntriesToFontInfo(
+  family: string,
+  familySpec: string,
+  entries: GoogleFontsRepositoryEntry[]
+): RemoteFontInfo[] {
+  return entries.map((entry) => ({
+    info: repositoryFontVariants(entry.name, familySpec).map((variant) => ({
+      family,
+      variant,
+      flags: "",
+      coverage: [0, 0x110000],
+    })),
+    conditions: [],
+    url: entry.download_url!,
+  }));
+}
+
+function googleFontsFamilyName(familySpec: string): string {
+  return familySpec.split(":")[0].trim();
+}
+
+function googleFontsRepositorySlug(family: string): string {
+  return family
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function repositoryFontVariants(name: string, familySpec: string) {
+  const style = /italic/i.test(name) ? "italic" : "normal";
+  const stretch = repositoryFontStretch(name);
+  const weights = /\[[^\]]*\bwght\b[^\]]*\]/i.test(name)
+    ? requestedGoogleFontsWeights(familySpec) ?? [repositoryFontWeight(name)]
+    : [repositoryFontWeight(name)];
+
+  return weights.map((weight) => ({
+    style,
+    weight,
+    stretch,
+  }));
+}
+
+function requestedGoogleFontsWeights(familySpec: string): number[] | undefined {
+  const separator = familySpec.indexOf(":");
+  if (separator < 0) {
+    return undefined;
+  }
+
+  const axisSpec = familySpec.slice(separator + 1);
+  const at = axisSpec.indexOf("@");
+  if (at < 0) {
+    return undefined;
+  }
+
+  const axes = axisSpec
+    .slice(0, at)
+    .split(",")
+    .map((axis) => axis.trim());
+  const weightIndex = axes.indexOf("wght");
+  if (weightIndex < 0) {
+    return undefined;
+  }
+
+  const weights = axisSpec
+    .slice(at + 1)
+    .split(";")
+    .flatMap((tuple) => {
+      const value = tuple.split(",")[weightIndex]?.trim();
+      if (!value) {
+        return [];
+      }
+      const range = /^(\d+)\.\.(\d+)$/.exec(value);
+      if (range) {
+        const start = Number.parseInt(range[1], 10);
+        const end = Number.parseInt(range[2], 10);
+        return commonFontWeights().filter(
+          (weight) => start <= weight && weight <= end
+        );
+      }
+      const weight = Number.parseInt(value, 10);
+      return Number.isSafeInteger(weight) ? [weight] : [];
+    });
+
+  return weights.length > 0
+    ? Array.from(new Set(weights)).sort((a, b) => a - b)
+    : undefined;
+}
+
+function commonFontWeights(): number[] {
+  return [100, 200, 300, 400, 500, 600, 700, 800, 900];
+}
+
+function repositoryFontWeight(name: string): number {
+  if (/thin/i.test(name)) {
+    return 100;
+  }
+  if (/(?:extra|ultra)[-_ ]?light/i.test(name)) {
+    return 200;
+  }
+  if (/light/i.test(name)) {
+    return 300;
+  }
+  if (/medium/i.test(name)) {
+    return 500;
+  }
+  if (/(?:semi|demi)[-_ ]?bold/i.test(name)) {
+    return 600;
+  }
+  if (/(?:extra|ultra)[-_ ]?bold/i.test(name)) {
+    return 800;
+  }
+  if (/(?:black|heavy)/i.test(name)) {
+    return 900;
+  }
+  if (/bold/i.test(name)) {
+    return 700;
+  }
+  return 400;
+}
+
+function repositoryFontStretch(name: string): number {
+  if (/semi[-_ ]?condensed/i.test(name)) {
+    return 875;
+  }
+  if (/condensed/i.test(name)) {
+    return 750;
+  }
+  if (/semi[-_ ]?expanded/i.test(name)) {
+    return 1125;
+  }
+  if (/expanded/i.test(name)) {
+    return 1250;
+  }
+  return 1000;
 }
 
 function dedupeFontsByUrl(fonts: RemoteFontInfo[]): RemoteFontInfo[] {

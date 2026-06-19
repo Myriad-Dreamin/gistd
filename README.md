@@ -26,6 +26,7 @@ Example Documents:
 - [https://gistd.myriad-dreamin.com/johanvx/typst-undergradmath/blob/main/undergradmath.typ](https://gistd.myriad-dreamin.com/johanvx/typst-undergradmath/blob/main/undergradmath.typ)
 - [https://gistd.myriad-dreamin.com/Jollywatt/typst-fletcher/blob/main/docs/manual.typ](https://gistd.myriad-dreamin.com/Jollywatt/typst-fletcher/blob/main/docs/manual.typ)
 - [https://gistd.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ](https://gistd.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ)
+- [https://gistd.myriad-dreamin.com/Myriad-Dreamin/gistd/blob/main/samples/noto-sans-sc.typ?fonts=google-fonts:Noto+Sans+SC](https://gistd.myriad-dreamin.com/Myriad-Dreamin/gistd/blob/main/samples/noto-sans-sc.typ?fonts=google-fonts:Noto+Sans+SC)
 
 ## View Parameters
 

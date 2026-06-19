@@ -26,6 +26,7 @@ https://gistd-cn.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/templ
 - [https://gistd-cn.myriad-dreamin.com/johanvx/typst-undergradmath/blob/main/undergradmath.typ](https://gistd-cn.myriad-dreamin.com/johanvx/typst-undergradmath/blob/main/undergradmath.typ)
 - [https://gistd-cn.myriad-dreamin.com/Jollywatt/typst-fletcher/blob/main/docs/manual.typ](https://gistd-cn.myriad-dreamin.com/Jollywatt/typst-fletcher/blob/main/docs/manual.typ)
 - [https://gistd-cn.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ](https://gistd-cn.myriad-dreamin.com/typst/templates/blob/main/charged-ieee/template/main.typ)
+- [https://gistd-cn.myriad-dreamin.com/Myriad-Dreamin/gistd/blob/main/samples/noto-sans-sc.typ?fonts=google-fonts:Noto+Sans+SC](https://gistd-cn.myriad-dreamin.com/Myriad-Dreamin/gistd/blob/main/samples/noto-sans-sc.typ?fonts=google-fonts:Noto+Sans+SC)
 
 ### 显示参数
 
