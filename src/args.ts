@@ -4,6 +4,7 @@ import {
   storageSpecFromPath,
 } from "./storage";
 import { README, README_CN } from "./storage";
+import { DEFAULT_TYPST_VERSION } from "./typst-version";
 
 // @ts-ignore
 const isDev = false; // import.meta.env !== undefined;
@@ -19,7 +20,7 @@ const TEST_PATH = "@any/github.com/Myriad-Dreamin/gistd/raw/main/README.typ";
 const DEFAULT_PAGE = "1";
 // const DEFAULT_MODE = "doc";
 const DEFAULT_MODE = isDev ? DEFAULT_DEV_MODE : "doc";
-const DEFAULT_VERSION = "latest";
+const DEFAULT_VERSION = DEFAULT_TYPST_VERSION;
 
 export interface Args {
   storage: StorageSpecExt;

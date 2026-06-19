@@ -8,7 +8,8 @@ import { TypstDocument, Doc } from "./doc";
 import { argsFromUrl } from "./args";
 import { getFontProvider } from "./font";
 import { ErrorPanel, DiagnosticMessage } from "./error";
-import type { TypstCompiler } from "typst.ts-0.14";
+import { compileTypstDocument } from "./typst-compiler";
+import { resolveTypstVersion } from "./typst-version";
 
 let $typst = window.$typst;
 
@@ -33,16 +34,7 @@ const PermalinkButton = () =>
       const search = new URLSearchParams(window.location.search || "");
       search.set(
         "g-version",
-        (() => {
-          switch (args.version) {
-            case "v0.13.0":
-            case "v0.13.1":
-            case "v0.14.0":
-              return args.version;
-            default:
-              return "v0.14.0";
-          }
-        })()
+        resolveTypstVersion(args.version).concreteVersion
       );
       window.location.search = search.toString();
     },
@@ -227,92 +219,36 @@ const App = () => {
 
         setTypstTheme(darkMode.val);
 
-        const compiler = await $typst.getCompiler();
-
         console.log("start compile", mainFilePath);
 
-        if ("runWithWorld" in compiler) {
-          await compiler.reset();
-          // todo: remove me
-          // @ts-ignore
-          await compiler.runWithWorld({ mainFilePath }, async (world) => {
-            const { hasError, diagnostics } = (await world.compile()) as {
-              hasError?: boolean;
-              diagnostics: DiagnosticMessage[];
-            };
+        const compileResult = await compileTypstDocument($typst, {
+          mainFilePath,
+          queryPdfpc: mode === "slide",
+        });
+        console.log("diagnostics", compileResult.diagnostics);
+        if (compileResult.hasError) {
+          error.val = compileResult.diagnostics || [];
+          return;
+        }
 
-            console.log("diagnostics", diagnostics);
-            if (
-              (hasError === undefined &&
-                diagnostics &&
-                diagnostics.length > 0) ||
-              hasError
-            ) {
-              error.val = diagnostics || [];
-              return;
-            }
+        if (compileResult.vector !== undefined) {
+          typstDoc.val?.addChangement([
+            compileResult.changeKind,
+            compileResult.vector,
+          ]);
+        }
+        error.val = "";
 
-            const { result: data, diagnostics: diagnostics2 } =
-              await world.vector();
-            if (diagnostics2 && diagnostics2.length > 0) {
-              error.val = diagnostics2;
-              return;
-            }
-            typstDoc.val?.addChangement(["new", data]);
-            error.val = "";
+        if (compileResult.title) {
+          document.title = compileResult.title;
+        }
 
-            if ("title" in world) {
-              const title = world.title();
-              if (title) {
-                document.title = title;
-              }
-            }
-
-            // support pdfpc
-            if (mode === "slide") {
-              try {
-                const pdfpcData = await world.query({
-                  selector: "<pdfpc>",
-                });
-                const processedPdfpc = processPdfpc(pdfpcData);
-                pdfpc.val = processedPdfpc;
-                // Initialize label indices when new pdfpc data is loaded
-                initializeLabelIndices();
-                console.log("processed pdfpc", processedPdfpc);
-              } catch (e) {
-                console.log("this slide does not have pdfpc");
-              }
-            }
-          });
-        } else {
-          let compilerCompat = compiler as any as TypstCompiler;
-          const { result: data, diagnostics } = await compilerCompat.compile({
-            mainFilePath,
-            diagnostics: "full",
-          });
-          console.log("diagnostics", diagnostics);
-          if (diagnostics && diagnostics.length > 0) {
-            error.val = diagnostics;
-            return;
-          }
-
-          if (mode === "slide") {
-            try {
-              const pdfpcData = await compilerCompat.query({
-                mainFilePath,
-                selector: "<pdfpc>",
-              });
-              pdfpc.val = processPdfpc(pdfpcData);
-              // Initialize label indices when new pdfpc data is loaded
-              initializeLabelIndices();
-              console.log("processed pdfpc", pdfpc.val);
-            } catch (e) {
-              console.log("this slide does not have pdfpc");
-            }
-          }
-
-          typstDoc.val.addChangement(["diff-v1", data]);
-          error.val = "";
+        if (mode === "slide" && compileResult.pdfpc !== undefined) {
+          const processedPdfpc = processPdfpc(compileResult.pdfpc);
+          pdfpc.val = processedPdfpc;
+          // Initialize label indices when new pdfpc data is loaded
+          initializeLabelIndices();
+          console.log("processed pdfpc", processedPdfpc);
         }
       }
     } catch (e) {
