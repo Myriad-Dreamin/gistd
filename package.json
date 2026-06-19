@@ -30,6 +30,15 @@
     "typst.ts-0.14": "npm:@myriaddreamin/typst.ts@0.7.0-rc1",
     "typst-ts-renderer-0.14": "npm:@myriaddreamin/typst-ts-renderer@0.7.0-rc1",
     "typst-ts-compiler-0.14": "npm:@myriaddreamin/typst-ts-web-compiler@0.7.0-rc1",
+    "typst.ts-0.14.1": "npm:@myriaddreamin/typst.ts@0.7.0-rc2",
+    "typst-ts-renderer-0.14.1": "npm:@myriaddreamin/typst-ts-renderer@0.7.0-rc2",
+    "typst-ts-compiler-0.14.1": "npm:@myriaddreamin/typst-ts-web-compiler@0.7.0-rc2",
+    "typst.ts-0.14.2": "npm:@myriaddreamin/typst.ts@0.7.0",
+    "typst-ts-renderer-0.14.2": "npm:@myriaddreamin/typst-ts-renderer@0.7.0",
+    "typst-ts-compiler-0.14.2": "npm:@myriaddreamin/typst-ts-web-compiler@0.7.0",
+    "typst.ts-0.15.0": "npm:@myriaddreamin/typst.ts@0.8.0-rc1",
+    "typst-ts-renderer-0.15.0": "npm:@myriaddreamin/typst-ts-renderer@0.8.0-rc1",
+    "typst-ts-compiler-0.15.0": "npm:@myriaddreamin/typst-ts-web-compiler@0.8.0-rc1",
     "isomorphic-git": "^1.33.1",
     "vanjs-core": "^1.5.5"
   }
