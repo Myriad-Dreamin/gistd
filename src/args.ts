@@ -4,6 +4,8 @@ import {
   storageSpecFromPath,
 } from "./storage";
 import { README, README_CN } from "./storage";
+import { parseFontSpecsFromSearch } from "./font-spec";
+import type { FontSpec } from "./font-spec";
 
 // @ts-ignore
 const isDev = false; // import.meta.env !== undefined;
@@ -26,6 +28,7 @@ export interface Args {
   page: number;
   mode: "slide" | "doc";
   version: string;
+  fontSpecs: FontSpec[];
 }
 
 let _cacheKey: [string, string, string];
@@ -54,10 +57,12 @@ export function argsFromUrl(): Args {
     mode = DEFAULT_MODE;
   }
   let version = search.get("g-version") || DEFAULT_VERSION;
+  const fontSpecs = parseFontSpecsFromSearch(locationSearch || "");
 
   search.delete("g-page");
   search.delete("g-mode");
   search.delete("g-version");
+  search.delete("fonts");
   return (_cache = {
     storage: createStorageSpecExt(
       storageSpecFromPath(isDev ? TEST_PATH : inputPath, search, readme)
@@ -65,5 +70,6 @@ export function argsFromUrl(): Args {
     version,
     page,
     mode,
+    fontSpecs,
   });
 }

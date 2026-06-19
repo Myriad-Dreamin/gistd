@@ -63,6 +63,10 @@ These URL parameters can change the behavior of gistd.
   - `slide`: View the document in the slide mode.
 - `g-version`: The typst compiler version to use.
   - Could be `v0.13.0`, `v0.13.1`, `v0.14.0`, or `latest`.
+- `fonts`: Extra font providers to register. This parameter can appear multiple times, and each value must include its provider as `provider:value`.
+  - `google-fonts:<family>`: Load the family from Google Fonts, for example `?fonts=google-fonts:Noto+Sans+SC`.
+  - Multiple families can be listed by repeating the parameter, for example `?fonts=google-fonts:Noto+Sans+SC&fonts=google-fonts:Roboto`.
+  - Google Fonts axis syntax is passed after the family name, for example `?fonts=google-fonts:Roboto:wght@400;700` or `?fonts=google-fonts:Roboto:ital,wght@0,400;1,700`.
 
 = Slide View
 
