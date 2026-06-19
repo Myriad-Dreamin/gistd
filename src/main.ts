@@ -117,6 +117,7 @@ const App = () => {
     storage,
     page: initialPage,
     mode,
+    fontSpecs,
   } = argsFromUrl();
   console.log("storage", storage, "page", initialPage, "mode", mode);
   if (mode === "slide") {
@@ -184,7 +185,7 @@ const App = () => {
     await $typst.getCompiler();
     compilerLoaded.val = true;
     if ("setFonts" in $typst) {
-      const fontInfo = await getFontProvider();
+      const fontInfo = await getFontProvider(fontSpecs);
       console.log("fontInfo", fontInfo);
       // todo: remove me
       // @ts-ignore

@@ -1,6 +1,15 @@
 // @ts-ignore
 import type { LazyFont } from "typst.ts-0.14/dist/esm/options.init.mjs";
 import remoteFontInfo from "./fontInfo.json";
+import { cssToFontInformation } from "./font-css";
+import { googleFontsCssUrl } from "./font-spec";
+import type { FontSpec, GoogleFontsSpec } from "./font-spec";
+
+interface RemoteFontInfo {
+  info: any[];
+  conditions: { t: string; v: string }[];
+  url: string;
+}
 
 /**
  * Font cache
@@ -25,6 +34,17 @@ interface FontToLoad {
   url: string;
   dataFut: Promise<Uint8Array>;
   ttl: number;
+}
+
+function fontCacheKey(font: {
+  conditions: { t: string; v: string }[];
+  url: string;
+}) {
+  const conditionKey = font.conditions
+    .map(({ t, v }) => `${t}:${v}`)
+    .sort()
+    .join(",");
+  return conditionKey || `url:${font.url}`;
 }
 
 const promisifiedReq = <T>(req: IDBRequest<T>): Promise<T> => {
@@ -62,16 +82,69 @@ export function loadFontSync(
   };
 }
 
-export async function getFontProvider() {
+export async function getFontProvider(fontSpecs: FontSpec[] = []) {
+  const configuredFontInfo = await resolveConfiguredFontInfo(fontSpecs);
   try {
-    return await getWithIDBFontProvider();
+    return [...configuredFontInfo, ...(await getWithIDBFontProvider())];
   } catch (err) {
     console.error("error getting font provider with idb", err);
-    return remoteFontInfo;
+    return [...configuredFontInfo, ...defaultFontInfo()];
   }
 }
 
-export async function getWithIDBFontProvider() {
+export async function resolveConfiguredFontInfo(
+  fontSpecs: FontSpec[],
+  fetcher: typeof fetch = fetch
+): Promise<RemoteFontInfo[]> {
+  const fontInfo = await Promise.all(
+    fontSpecs.map(async (spec) => {
+      try {
+        return await resolveFontSpec(spec, fetcher);
+      } catch (err) {
+        console.error("error resolving font provider", spec, err);
+        return [];
+      }
+    })
+  );
+  return dedupeFontsByUrl(fontInfo.flat());
+}
+
+async function resolveFontSpec(
+  spec: FontSpec,
+  fetcher: typeof fetch
+): Promise<RemoteFontInfo[]> {
+  switch (spec.provider) {
+    case "google-fonts":
+      return resolveGoogleFonts(spec, fetcher);
+  }
+}
+
+async function resolveGoogleFonts(
+  spec: GoogleFontsSpec,
+  fetcher: typeof fetch
+): Promise<RemoteFontInfo[]> {
+  const cssUrl = googleFontsCssUrl(spec.family);
+  const response = await fetcher(cssUrl);
+  if (!response.ok) {
+    throw new Error(
+      `failed to fetch Google Fonts CSS: ${response.status} ${response.statusText}`
+    );
+  }
+
+  return cssToFontInformation(await response.text(), { baseUrl: cssUrl });
+}
+
+function dedupeFontsByUrl(fonts: RemoteFontInfo[]): RemoteFontInfo[] {
+  return Array.from(new Map(fonts.map((font) => [font.url, font])).values());
+}
+
+function defaultFontInfo(): RemoteFontInfo[] {
+  return remoteFontInfo as RemoteFontInfo[];
+}
+
+export async function getWithIDBFontProvider(
+  fontInfo: RemoteFontInfo[] = defaultFontInfo()
+) {
   // todo: move to upstream
   //   const loadFontSync = window.typstLoadFontSync;
 
@@ -109,11 +182,8 @@ export async function getWithIDBFontProvider() {
   // font rest fonts, if it exceeds ttl, we remove it
   const loadedFontFuts: Promise<Uint8Array>[] = [];
   const fontsToLoad: Record<string, FontToLoad> = {};
-  for (const remoteFont of remoteFontInfo) {
-    const conditionKey = remoteFont.conditions
-      .map(({ t, v }) => `${t}:${v}`)
-      .sort()
-      .join(",");
+  for (const remoteFont of fontInfo) {
+    const conditionKey = fontCacheKey(remoteFont);
     const obj = await promisifiedReq<FontCache>(
       fontCacheFull.get(conditionKey)
     );
@@ -191,7 +261,7 @@ export async function getWithIDBFontProvider() {
     };
   })();
 
-  return remoteFontInfo.map((font, i) => ({
+  return fontInfo.map((font, i) => ({
     blob: () => loadedFonts[i],
     ...font,
   }));
