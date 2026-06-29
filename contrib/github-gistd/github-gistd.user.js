@@ -89,17 +89,29 @@
       return item;
     }
 
-    const wrapper = element?.parentElement;
-    if (!wrapper?.parentElement) {
+    if (!element?.parentElement) {
       return element;
     }
 
-    const wrapperControls = wrapper.querySelectorAll("button, a, [role='button']");
-    if (wrapperControls.length === 1) {
-      return wrapper;
+    let node = element;
+    while (node.parentElement) {
+      const parent = node.parentElement;
+      const controls = parent.querySelectorAll("button, a, [role='button']");
+      const parentRect = parent.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+
+      if (
+        controls.length > 1 ||
+        parentRect.width > nodeRect.width + 48 ||
+        parentRect.height > nodeRect.height + 24
+      ) {
+        return node;
+      }
+
+      node = parent;
     }
 
-    return element;
+    return node;
   }
 
   function nearestActionContainer(element) {
