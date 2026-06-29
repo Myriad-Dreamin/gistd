@@ -15,6 +15,7 @@
 
   const BUTTON_ID = "gistd-userscript-open-button";
   const GISTD_ORIGIN = "https://gistd.myriad-dreamin.com";
+  const DEBUG_KEY = "__gistdLauncherDebug";
 
   function gistdUrl() {
     const url = new URL(window.location.href);
@@ -31,22 +32,36 @@
     return (
       document.querySelector(".BlobViewHeader-module__Box_3__ng6v2") ||
       document.querySelector('[class*="BlobViewHeader-module__Box"]') ||
+      document.querySelector('[class*="BlobViewHeader-module"]') ||
       document.querySelector('[data-testid="blob-header"]') ||
+      document.querySelector('[data-testid="blob-view-header"]') ||
+      document.querySelector('[data-testid="file-header"]') ||
       document.querySelector(".Box-header")
     );
   }
 
+  function normalizedText(element) {
+    return [
+      element.textContent,
+      element.getAttribute("aria-label"),
+      element.getAttribute("title"),
+      element.getAttribute("data-testid"),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
   function isNamedControl(element, name) {
     const normalizedName = name.toLowerCase();
-    return (
-      element.textContent?.trim().toLowerCase() === normalizedName ||
-      element.getAttribute("aria-label")?.trim().toLowerCase() === normalizedName ||
-      element.getAttribute("title")?.trim().toLowerCase() === normalizedName
-    );
+    const text = normalizedText(element);
+    return text === normalizedName || text.includes(normalizedName);
   }
 
   function findControl(name, root = document) {
-    const candidates = root.querySelectorAll("button, a");
+    const candidates = root.querySelectorAll("button, a, [role='button']");
     for (const candidate of candidates) {
       if (isNamedControl(candidate, name)) {
         return candidate;
@@ -55,30 +70,74 @@
     return null;
   }
 
+  function nearestActionItem(element) {
+    return element?.closest("li, [role='listitem']") || element;
+  }
+
+  function nearestActionContainer(element) {
+    return (
+      element?.closest('[role="group"]') ||
+      element?.closest("ul") ||
+      element?.parentElement
+    );
+  }
+
+  function findFilenameHeader() {
+    const filename = window.location.pathname.split("/").pop();
+    if (!filename) {
+      return null;
+    }
+
+    for (const element of document.querySelectorAll("span, strong, h1, h2, a")) {
+      if (element.textContent?.trim() === filename) {
+        return element.closest('[class*="BlobViewHeader-module"], .Box-header, .d-flex, .d-md-flex') || element.parentElement;
+      }
+    }
+
+    return null;
+  }
+
   function findFileActionsTarget() {
-    const addToSpaceButton = findControl("Add to space");
+    const addToSpaceButton =
+      findControl("Add to space") ||
+      findControl("space");
     if (addToSpaceButton) {
+      const item = nearestActionItem(addToSpaceButton);
       return {
-        parent: addToSpaceButton.parentElement,
-        before: addToSpaceButton,
+        kind: "add-to-space",
+        parent: item?.parentElement || addToSpaceButton.parentElement,
+        before: item || addToSpaceButton,
       };
     }
 
-    const rawButton = findControl("Raw") || findControl("Copy raw file");
-    const toolbar = rawButton?.closest('[role="group"], ul, .d-flex, .d-md-flex');
+    const rawButton =
+      findControl("Raw") ||
+      findControl("Copy raw file") ||
+      findControl("Download raw file");
+    const rawItem = nearestActionItem(rawButton);
+    const toolbar = nearestActionContainer(rawItem || rawButton);
     if (toolbar) {
       return {
+        kind: "raw-toolbar",
         parent: toolbar,
-        before: rawButton.closest("li") || rawButton,
+        before: rawItem || rawButton,
       };
     }
 
-    const header = findBlobHeader();
+    const header = findBlobHeader() || findFilenameHeader();
     return header ? { parent: header, before: null } : null;
   }
 
   function insertButton(button) {
     const target = findFileActionsTarget();
+    window[DEBUG_KEY] = {
+      href: window.location.href,
+      isTypstBlobPage: isTypstBlobPage(),
+      targetKind: target?.kind || "none",
+      targetParent: target?.parent?.tagName || null,
+      targetBefore: target?.before?.tagName || null,
+    };
+
     if (!target?.parent) {
       return false;
     }
