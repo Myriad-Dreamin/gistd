@@ -60,10 +60,19 @@
     return text === normalizedName || text.includes(normalizedName);
   }
 
+  function isVisible(element) {
+    const style = window.getComputedStyle(element);
+    return (
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      element.getClientRects().length > 0
+    );
+  }
+
   function findControl(name, root = document) {
     const candidates = root.querySelectorAll("button, a, [role='button']");
     for (const candidate of candidates) {
-      if (isNamedControl(candidate, name)) {
+      if (isVisible(candidate) && isNamedControl(candidate, name)) {
         return candidate;
       }
     }
@@ -72,6 +81,25 @@
 
   function nearestActionItem(element) {
     return element?.closest("li, [role='listitem']") || element;
+  }
+
+  function outerActionItem(element) {
+    const item = nearestActionItem(element);
+    if (item !== element) {
+      return item;
+    }
+
+    const wrapper = element?.parentElement;
+    if (!wrapper?.parentElement) {
+      return element;
+    }
+
+    const wrapperControls = wrapper.querySelectorAll("button, a, [role='button']");
+    if (wrapperControls.length === 1) {
+      return wrapper;
+    }
+
+    return element;
   }
 
   function nearestActionContainer(element) {
@@ -102,7 +130,7 @@
       findControl("Add to space") ||
       findControl("space");
     if (addToSpaceButton) {
-      const item = nearestActionItem(addToSpaceButton);
+      const item = outerActionItem(addToSpaceButton);
       return {
         kind: "add-to-space",
         parent: item?.parentElement || addToSpaceButton.parentElement,
@@ -130,12 +158,20 @@
 
   function insertButton(button) {
     const target = findFileActionsTarget();
+    const targetRect = target?.before?.getBoundingClientRect();
     window[DEBUG_KEY] = {
       href: window.location.href,
       isTypstBlobPage: isTypstBlobPage(),
       targetKind: target?.kind || "none",
       targetParent: target?.parent?.tagName || null,
       targetBefore: target?.before?.tagName || null,
+      targetRect: targetRect
+        ? {
+            width: targetRect.width,
+            height: targetRect.height,
+          }
+        : null,
+      inserted: false,
     };
 
     if (!target?.parent) {
@@ -146,15 +182,18 @@
 
     if (before) {
       if (button.parentElement === target.parent && button.nextElementSibling === before) {
+        window[DEBUG_KEY].inserted = true;
         return true;
       }
       target.parent.insertBefore(button, before);
+      window[DEBUG_KEY].inserted = true;
       return true;
     }
 
     if (button.parentElement !== target.parent || button.nextElementSibling) {
       target.parent.appendChild(button);
     }
+    window[DEBUG_KEY].inserted = true;
     return true;
   }
 
