@@ -147,6 +147,7 @@
         kind: "add-to-space",
         parent: item?.parentElement || addToSpaceButton.parentElement,
         before: item || addToSpaceButton,
+        template: addToSpaceButton,
       };
     }
 
@@ -161,6 +162,7 @@
         kind: "raw-toolbar",
         parent: toolbar,
         before: rawItem || rawButton,
+        template: rawButton,
       };
     }
 
@@ -177,6 +179,7 @@
       targetKind: target?.kind || "none",
       targetParent: target?.parent?.tagName || null,
       targetBefore: target?.before?.tagName || null,
+      targetTemplate: target?.template?.tagName || null,
       targetRect: targetRect
         ? {
             width: targetRect.width,
@@ -191,6 +194,7 @@
     }
 
     const before = target.before;
+    syncButtonWithTemplate(button, target.template);
 
     if (before) {
       if (button.parentElement === target.parent && button.nextElementSibling === before) {
@@ -231,6 +235,23 @@
     return button;
   }
 
+  function syncButtonWithTemplate(button, template) {
+    if (!template) {
+      return;
+    }
+
+    button.className = template.className || button.className;
+    button.classList.add("gistd-userscript-button");
+    button.removeAttribute("data-testid");
+    button.removeAttribute("data-hotkey");
+    button.removeAttribute("aria-describedby");
+    button.setAttribute("href", gistdUrl());
+    button.setAttribute("target", "_blank");
+    button.setAttribute("rel", "noopener noreferrer");
+    button.setAttribute("aria-label", "Previewing on Gistd");
+    button.setAttribute("title", "Previewing on Gistd");
+  }
+
   function installStyles() {
     if (document.getElementById("gistd-userscript-styles")) {
       return;
@@ -242,8 +263,12 @@
       .gistd-userscript-button {
         margin-left: 0;
         margin-right: 8px;
-        min-width: 32px;
+        width: 32px;
         white-space: nowrap;
+      }
+
+      #gistd-userscript-open-button .Button-label {
+        display: none;
       }
 
       .gistd-userscript-icon {
@@ -296,11 +321,13 @@
   }
 
   function scheduleUpsert() {
-    window.clearTimeout(scheduleUpsert.timeoutId);
-    scheduleUpsert.timeoutId = window.setTimeout(upsertButton, 50);
+    if (scheduleUpsert.rafId) {
+      window.cancelAnimationFrame(scheduleUpsert.rafId);
+    }
+    scheduleUpsert.rafId = window.requestAnimationFrame(upsertButton);
   }
 
-  scheduleUpsert.timeoutId = 0;
+  scheduleUpsert.rafId = 0;
 
   document.addEventListener("turbo:load", scheduleUpsert);
   document.addEventListener("pjax:end", scheduleUpsert);
