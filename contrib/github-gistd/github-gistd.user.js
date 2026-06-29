@@ -36,6 +36,31 @@
     );
   }
 
+  function findAddToSpaceButton(header) {
+    const candidates = header.querySelectorAll("button, a");
+    for (const candidate of candidates) {
+      if (candidate.textContent?.trim() === "Add to space") {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  function insertButton(header, button) {
+    const addToSpaceButton = findAddToSpaceButton(header);
+    const addToSpaceItem = addToSpaceButton?.closest("li, div, span") || addToSpaceButton;
+
+    if (addToSpaceItem?.parentElement) {
+      if (button.parentElement === addToSpaceItem.parentElement && button.nextElementSibling === addToSpaceItem) {
+        return;
+      }
+      addToSpaceItem.parentElement.insertBefore(button, addToSpaceItem);
+      return;
+    }
+
+    header.appendChild(button);
+  }
+
   function createButton() {
     const button = document.createElement("a");
     button.id = BUTTON_ID;
@@ -44,14 +69,15 @@
     button.target = "_blank";
     button.rel = "noopener noreferrer";
     button.setAttribute("aria-label", "Open this Typst file with gistd");
+    button.title = "Open with gistd";
     button.innerHTML = `
       <span class="Button-content">
-        <span class="Button-visual Button-leadingVisual">
-          <svg class="gistd-userscript-icon" aria-hidden="true" viewBox="0 0 576 512" width="14" height="14">
-            <path fill="currentColor" d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zm0 96a128 128 0 1 1 0 256a128 128 0 1 1 0-256zm0 80a48 48 0 1 0 0 96a48 48 0 1 0 0-96z"/>
+        <span class="Button-visual">
+          <svg class="gistd-userscript-icon" aria-hidden="true" viewBox="0 0 512 512" width="16" height="16">
+            <path fill="currentColor" d="M64 64c0-17.7 14.3-32 32-32h256c17.7 0 32 14.3 32 32v384c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V64zm32 0v384h256V64H96z"/>
+            <path fill="currentColor" d="M208 240a96 96 0 1 0-67.9 163.9c20.3 0 39.2-6.3 54.7-17.1l75.7 75.7c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-75.7-75.7c10.8-15.5 17.1-34.4 17.1-54.7A96 96 0 0 0 208 240zm-96 96a48 48 0 1 1 96 0a48 48 0 1 1-96 0z"/>
           </svg>
         </span>
-        <span class="Button-label">Gistd</span>
       </span>
     `;
     return button;
@@ -66,7 +92,9 @@
     style.id = "gistd-userscript-styles";
     style.textContent = `
       .gistd-userscript-button {
-        margin-left: 8px;
+        margin-left: 0;
+        margin-right: 8px;
+        min-width: 32px;
         white-space: nowrap;
       }
 
@@ -89,7 +117,8 @@
         display: inline-flex;
         font: 500 12px/20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         min-height: 28px;
-        padding: 3px 12px;
+        justify-content: center;
+        padding: 3px 8px;
       }
 
       a.gistd-userscript-button:not(.Button):hover {
@@ -116,13 +145,11 @@
 
     if (existing) {
       existing.href = gistdUrl();
-      if (!header.contains(existing)) {
-        header.appendChild(existing);
-      }
+      insertButton(header, existing);
       return;
     }
 
-    header.appendChild(createButton());
+    insertButton(header, createButton());
   }
 
   function scheduleUpsert() {
