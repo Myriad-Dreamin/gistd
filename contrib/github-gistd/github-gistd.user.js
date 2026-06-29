@@ -130,6 +130,32 @@
     );
   }
 
+  function isIconOnlyControl(element) {
+    const labelText = element.querySelector(".Button-label")?.textContent?.trim();
+    const text = element.textContent?.trim();
+    const rect = element.getBoundingClientRect();
+    return (
+      isVisible(element) &&
+      element.id !== BUTTON_ID &&
+      element.querySelector("svg") &&
+      !labelText &&
+      !text &&
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.width <= rect.height + 24
+    );
+  }
+
+  function findIconButtonTemplate(toolbar) {
+    const controls = toolbar.querySelectorAll("button, a, [role='button']");
+    for (const control of controls) {
+      if (isIconOnlyControl(control)) {
+        return control;
+      }
+    }
+    return null;
+  }
+
   function findToolbarTargetFromRaw(rawButton) {
     const rawItem = nearestActionItem(rawButton);
     const toolbar = nearestActionContainer(rawItem || rawButton);
@@ -137,6 +163,7 @@
       return null;
     }
 
+    const iconTemplate = findIconButtonTemplate(toolbar);
     const addToSpaceButton = findControl("Add to space", toolbar);
     if (addToSpaceButton) {
       const item = outerActionItem(addToSpaceButton);
@@ -144,7 +171,7 @@
         kind: "file-toolbar-add-to-space",
         parent: item?.parentElement || toolbar,
         before: item || addToSpaceButton,
-        template: addToSpaceButton,
+        template: iconTemplate || addToSpaceButton,
       };
     }
 
@@ -154,7 +181,7 @@
       kind: "file-toolbar",
       parent: toolbar,
       before: firstAction || rawItem || rawButton,
-      template: rawButton,
+      template: iconTemplate || rawButton,
     };
   }
 
@@ -279,7 +306,6 @@
       .gistd-userscript-button {
         margin-left: 0;
         margin-right: 8px;
-        width: 32px;
         white-space: nowrap;
       }
 
