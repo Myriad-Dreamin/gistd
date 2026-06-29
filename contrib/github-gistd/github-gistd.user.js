@@ -68,8 +68,8 @@
     button.href = gistdUrl();
     button.target = "_blank";
     button.rel = "noopener noreferrer";
-    button.setAttribute("aria-label", "Open this Typst file with gistd");
-    button.title = "Open with gistd";
+    button.setAttribute("aria-label", "Previewing on Gistd");
+    button.title = "Previewing on Gistd";
     button.innerHTML = `
       <span class="Button-content">
         <span class="Button-visual">
