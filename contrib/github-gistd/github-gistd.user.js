@@ -36,29 +36,67 @@
     );
   }
 
-  function findAddToSpaceButton(header) {
-    const candidates = header.querySelectorAll("button, a");
+  function isNamedControl(element, name) {
+    const normalizedName = name.toLowerCase();
+    return (
+      element.textContent?.trim().toLowerCase() === normalizedName ||
+      element.getAttribute("aria-label")?.trim().toLowerCase() === normalizedName ||
+      element.getAttribute("title")?.trim().toLowerCase() === normalizedName
+    );
+  }
+
+  function findControl(name, root = document) {
+    const candidates = root.querySelectorAll("button, a");
     for (const candidate of candidates) {
-      if (candidate.textContent?.trim() === "Add to space") {
+      if (isNamedControl(candidate, name)) {
         return candidate;
       }
     }
     return null;
   }
 
-  function insertButton(header, button) {
-    const addToSpaceButton = findAddToSpaceButton(header);
-    const addToSpaceItem = addToSpaceButton?.closest("li, div, span") || addToSpaceButton;
-
-    if (addToSpaceItem?.parentElement) {
-      if (button.parentElement === addToSpaceItem.parentElement && button.nextElementSibling === addToSpaceItem) {
-        return;
-      }
-      addToSpaceItem.parentElement.insertBefore(button, addToSpaceItem);
-      return;
+  function findFileActionsTarget() {
+    const addToSpaceButton = findControl("Add to space");
+    if (addToSpaceButton) {
+      return {
+        parent: addToSpaceButton.parentElement,
+        before: addToSpaceButton,
+      };
     }
 
-    header.appendChild(button);
+    const rawButton = findControl("Raw") || findControl("Copy raw file");
+    const toolbar = rawButton?.closest('[role="group"], ul, .d-flex, .d-md-flex');
+    if (toolbar) {
+      return {
+        parent: toolbar,
+        before: rawButton.closest("li") || rawButton,
+      };
+    }
+
+    const header = findBlobHeader();
+    return header ? { parent: header, before: null } : null;
+  }
+
+  function insertButton(button) {
+    const target = findFileActionsTarget();
+    if (!target?.parent) {
+      return false;
+    }
+
+    const before = target.before;
+
+    if (before) {
+      if (button.parentElement === target.parent && button.nextElementSibling === before) {
+        return true;
+      }
+      target.parent.insertBefore(button, before);
+      return true;
+    }
+
+    if (button.parentElement !== target.parent || button.nextElementSibling) {
+      target.parent.appendChild(button);
+    }
+    return true;
   }
 
   function createButton() {
@@ -136,20 +174,15 @@
       return;
     }
 
-    const header = findBlobHeader();
-    if (!header) {
-      return;
-    }
-
     installStyles();
 
     if (existing) {
       existing.href = gistdUrl();
-      insertButton(header, existing);
+      insertButton(existing);
       return;
     }
 
-    insertButton(header, createButton());
+    insertButton(createButton());
   }
 
   function scheduleUpsert() {
