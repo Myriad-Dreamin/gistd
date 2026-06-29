@@ -122,6 +122,42 @@
     );
   }
 
+  function findRawButton() {
+    return (
+      findControl("Raw") ||
+      findControl("Copy raw file") ||
+      findControl("Download raw file")
+    );
+  }
+
+  function findToolbarTargetFromRaw(rawButton) {
+    const rawItem = nearestActionItem(rawButton);
+    const toolbar = nearestActionContainer(rawItem || rawButton);
+    if (!toolbar) {
+      return null;
+    }
+
+    const addToSpaceButton = findControl("Add to space", toolbar);
+    if (addToSpaceButton) {
+      const item = outerActionItem(addToSpaceButton);
+      return {
+        kind: "file-toolbar-add-to-space",
+        parent: item?.parentElement || toolbar,
+        before: item || addToSpaceButton,
+        template: addToSpaceButton,
+      };
+    }
+
+    const firstAction = [...toolbar.children].find((child) => child.id !== BUTTON_ID && isVisible(child));
+
+    return {
+      kind: "file-toolbar",
+      parent: toolbar,
+      before: firstAction || rawItem || rawButton,
+      template: rawButton,
+    };
+  }
+
   function findFilenameHeader() {
     const filename = window.location.pathname.split("/").pop();
     if (!filename) {
@@ -138,32 +174,12 @@
   }
 
   function findFileActionsTarget() {
-    const addToSpaceButton =
-      findControl("Add to space") ||
-      findControl("space");
-    if (addToSpaceButton) {
-      const item = outerActionItem(addToSpaceButton);
-      return {
-        kind: "add-to-space",
-        parent: item?.parentElement || addToSpaceButton.parentElement,
-        before: item || addToSpaceButton,
-        template: addToSpaceButton,
-      };
-    }
-
-    const rawButton =
-      findControl("Raw") ||
-      findControl("Copy raw file") ||
-      findControl("Download raw file");
-    const rawItem = nearestActionItem(rawButton);
-    const toolbar = nearestActionContainer(rawItem || rawButton);
-    if (toolbar) {
-      return {
-        kind: "raw-toolbar",
-        parent: toolbar,
-        before: rawItem || rawButton,
-        template: rawButton,
-      };
+    const rawButton = findRawButton();
+    if (rawButton) {
+      const target = findToolbarTargetFromRaw(rawButton);
+      if (target) {
+        return target;
+      }
     }
 
     const header = findBlobHeader() || findFilenameHeader();
