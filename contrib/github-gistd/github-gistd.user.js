@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         GitHub Gistd Button
+// @name         Gistd Launcher
 // @namespace    https://github.com/Myriad-Dreamin/gistd
 // @version      0.1.0
 // @description  Add a Gistd button to GitHub Typst blob pages.
@@ -44,7 +44,16 @@
     button.target = "_blank";
     button.rel = "noopener noreferrer";
     button.setAttribute("aria-label", "Open this Typst file with gistd");
-    button.innerHTML = '<span class="Button-content"><span class="Button-label">Gistd</span></span>';
+    button.innerHTML = `
+      <span class="Button-content">
+        <span class="Button-visual Button-leadingVisual">
+          <svg class="gistd-userscript-icon" aria-hidden="true" viewBox="0 0 576 512" width="14" height="14">
+            <path fill="currentColor" d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zm0 96a128 128 0 1 1 0 256a128 128 0 1 1 0-256zm0 80a48 48 0 1 0 0 96a48 48 0 1 0 0-96z"/>
+          </svg>
+        </span>
+        <span class="Button-label">Gistd</span>
+      </span>
+    `;
     return button;
   }
 
@@ -59,6 +68,10 @@
       .gistd-userscript-button {
         margin-left: 8px;
         white-space: nowrap;
+      }
+
+      .gistd-userscript-icon {
+        display: block;
       }
 
       a.gistd-userscript-button,

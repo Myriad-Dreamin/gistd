@@ -1,4 +1,4 @@
-# GitHub Gistd userscript
+# Gistd Launcher
 
 This userscript adds a GitHub-style `Gistd` button to GitHub Typst blob pages.
 
