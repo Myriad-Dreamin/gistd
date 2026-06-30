@@ -2,7 +2,7 @@
 
 This userscript adds a GitHub-style `Gistd` button to GitHub Typst blob pages.
 
-Install `github-gistd.user.js` in Tampermonkey, Violentmonkey, or another userscript manager, then open a GitHub `.typ` file such as:
+Install `gistd-launcher.user.js` in Tampermonkey, Violentmonkey, or another userscript manager, then open a GitHub `.typ` file such as:
 
 ```text
 https://github.com/Myriad-Dreamin/gistd/blob/main/README.typ
