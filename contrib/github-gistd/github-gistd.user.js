@@ -41,11 +41,19 @@
   }
 
   function normalizedText(element) {
+    const labelledBy = element
+      .getAttribute("aria-labelledby")
+      ?.split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent)
+      .filter(Boolean)
+      .join(" ");
+
     return [
       element.textContent,
       element.getAttribute("aria-label"),
       element.getAttribute("title"),
       element.getAttribute("data-testid"),
+      labelledBy,
     ]
       .filter(Boolean)
       .join(" ")
@@ -185,6 +193,25 @@
     };
   }
 
+  function findBlobHeaderTarget() {
+    const header = findBlobHeader();
+    if (!header) {
+      return null;
+    }
+
+    const addToSpaceButton = findControl("Add to space", header);
+    if (!addToSpaceButton) {
+      return null;
+    }
+
+    return {
+      kind: "blob-header-add-to-space",
+      parent: addToSpaceButton.parentElement || header,
+      before: addToSpaceButton,
+      template: addToSpaceButton,
+    };
+  }
+
   function findFilenameHeader() {
     const filename = window.location.pathname.split("/").pop();
     if (!filename) {
@@ -201,6 +228,11 @@
   }
 
   function findFileActionsTarget() {
+    const headerTarget = findBlobHeaderTarget();
+    if (headerTarget) {
+      return headerTarget;
+    }
+
     const rawButton = findRawButton();
     if (rawButton) {
       const target = findToolbarTargetFromRaw(rawButton);
@@ -285,9 +317,23 @@
 
     button.className = template.className || button.className;
     button.classList.add("gistd-userscript-button");
-    button.removeAttribute("data-testid");
-    button.removeAttribute("data-hotkey");
-    button.removeAttribute("aria-describedby");
+    for (const attribute of [
+      "data-component",
+      "data-size",
+      "data-variant",
+      "data-no-visuals",
+      "data-loading",
+    ]) {
+      const value = template.getAttribute(attribute);
+      if (value === null) {
+        button.removeAttribute(attribute);
+      } else {
+        button.setAttribute(attribute, value);
+      }
+    }
+    for (const attribute of ["data-testid", "data-hotkey", "aria-describedby", "aria-labelledby"]) {
+      button.removeAttribute(attribute);
+    }
     button.setAttribute("href", gistdUrl());
     button.setAttribute("target", "_blank");
     button.setAttribute("rel", "noopener noreferrer");
@@ -304,8 +350,6 @@
     style.id = "gistd-userscript-styles";
     style.textContent = `
       .gistd-userscript-button {
-        margin-left: 0;
-        margin-right: 8px;
         white-space: nowrap;
       }
 
