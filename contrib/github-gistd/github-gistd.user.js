@@ -300,9 +300,9 @@
     button.innerHTML = `
       <span class="Button-content">
         <span class="Button-visual">
-          <svg class="gistd-userscript-icon" aria-hidden="true" viewBox="0 0 512 512" width="16" height="16">
-            <path fill="currentColor" d="M64 64c0-17.7 14.3-32 32-32h256c17.7 0 32 14.3 32 32v384c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V64zm32 0v384h256V64H96z"/>
-            <path fill="currentColor" d="M208 240a96 96 0 1 0-67.9 163.9c20.3 0 39.2-6.3 54.7-17.1l75.7 75.7c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-75.7-75.7c10.8-15.5 17.1-34.4 17.1-54.7A96 96 0 0 0 208 240zm-96 96a48 48 0 1 1 96 0a48 48 0 1 1-96 0z"/>
+          <svg data-component="Octicon" aria-hidden="true" focusable="false" class="octicon octicon-file-media gistd-userscript-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="display: inline-block; overflow: visible; vertical-align: text-bottom;">
+            <path d="M4.75 1A1.75 1.75 0 0 0 3 2.75v4.7a5.25 5.25 0 0 1 1.5-.38V2.75a.25.25 0 0 1 .25-.25H8.5v2.25c0 .966.784 1.75 1.75 1.75h1.25v6.75a.25.25 0 0 1-.25.25h-.7l1.43 1.43A1.75 1.75 0 0 0 13 13.25v-8.5a.75.75 0 0 0-.22-.53l-3-3A.75.75 0 0 0 9.25 1h-4.5Zm5.25 2.56L10.94 5h-.69a.25.25 0 0 1-.25-.25V3.56Z"/>
+            <path d="M6.25 8.5a2.25 2.25 0 1 0 0 4.5a2.25 2.25 0 0 0 0-4.5ZM2.5 10.75a3.75 3.75 0 1 1 6.61 2.43l2.1 2.1a.75.75 0 1 1-1.06 1.06l-2.1-2.1a3.75 3.75 0 0 1-5.55-3.49Z"/>
           </svg>
         </span>
       </span>
@@ -355,10 +355,6 @@
 
       #gistd-userscript-open-button .Button-label {
         display: none;
-      }
-
-      .gistd-userscript-icon {
-        display: block;
       }
 
       a.gistd-userscript-button,
