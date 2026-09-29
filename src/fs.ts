@@ -11,6 +11,7 @@ import {
   GitHubStorageSpecExt,
   ForgejoStorageSpecExt,
   StorageSpecExt,
+  refSegmentCount,
 } from "./storage";
 
 // @ts-ignore
@@ -237,8 +238,8 @@ interface GitCacheMeta {
 }
 
 class GitLoader {
-  private cacheKey: string;
-  private fs: LightningFS;
+  private cacheKey!: string;
+  private fs!: LightningFS;
   private idb!: IDBDatabase;
 
   constructor(
@@ -250,10 +251,7 @@ class GitLoader {
     public intoCompiler: (loader: () => Promise<void>) => any,
     public onRemoteUpdated: (files: Map<string, Uint8Array>) => Promise<void>
   ) {
-    this.cacheKey = `gistd-git-${this.storage.remoteUrl()}$$[${
-      this.storage.spec.ref
-    }]`;
-    this.fs = this.createFs(false);
+    // cacheKey/fs are set in load(), after the ref is resolved.
     this.intoCompiler(async () => {
       for (const [path, data] of await this.readAllFiles()) {
         this.fsState.val = this.fsState.val!.add(path, data);
@@ -313,6 +311,12 @@ class GitLoader {
     const del: string[] = [];
 
     try {
+      await this.resolveRef();
+      this.cacheKey = `gistd-git-${this.storage.remoteUrl()}$$[${
+        this.storage.spec.ref
+      }]`;
+      this.fs = this.createFs(false);
+
       const req = indexedDB.open("gistd-git-meta", 1);
       this.remoteFsLoaded.val = false;
       req.onupgradeneeded = (event) => {
@@ -418,16 +422,48 @@ class GitLoader {
     }
   }
 
+  private corsRequest = async (h: GitHttpRequest) => {
+    h.url = this.storage.corsUrl(h.url);
+    console.log("request", h.url);
+    return await request(h);
+  };
+
+  /// URLs like `blob/coro/delegation-study/paper.typ` are ambiguous: the ref
+  /// may contain `/`. Ask the remote for its refs once (memoized, so cached
+  /// visits stay offline) and rewrite ref/rest/slug accordingly.
+  private async resolveRef() {
+    const spec = this.storage.spec;
+    const segments = [spec.ref, ...spec.rest];
+    if (spec.rest.length <= 1 || /^[0-9a-f]{40}$/.test(spec.ref)) return;
+
+    const memoKey = `gistd-ref:${this.storage.remoteUrl()}:${segments.join(
+      "/"
+    )}`;
+    let n = Number(localStorage.getItem(memoKey)) || 0;
+    if (!n) {
+      try {
+        const refs = await git.listServerRefs({
+          http: { request: this.corsRequest },
+          url: this.storage.remoteUrl(),
+          protocolVersion: 1,
+        });
+        n = refSegmentCount(
+          segments,
+          refs.map((r) => r.ref)
+        );
+        localStorage.setItem(memoKey, String(n));
+      } catch (e) {
+        console.warn("failed to resolve ref, assuming single segment", e);
+        n = 1;
+      }
+    }
+    spec.ref = segments.slice(0, n).join("/");
+    spec.rest = segments.slice(n);
+    spec.slug = spec.rest.join("/");
+  }
+
   private async loadFromGit() {
-    await loadFromGit(
-      this.storage,
-      async (h: GitHttpRequest) => {
-        h.url = this.storage.corsUrl(h.url);
-        console.log("request", h.url);
-        return await request(h);
-      },
-      this.fs
-    );
+    await loadFromGit(this.storage, this.corsRequest, this.fs);
   }
 
   private async tryLoadFromGit() {
