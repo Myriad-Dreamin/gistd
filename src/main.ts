@@ -110,8 +110,8 @@ const App = () => {
     compilerLoaded = van.state(false),
     /// Captures font load status
     fontLoaded = van.state(false),
-    /// Binds to filesystem reload event
-    reloadBell = van.state(false);
+    /// Binds to filesystem reload event (bumped on every fs (re)load)
+    reloadBell = van.state(0);
   const {
     /// Creates storage spec from url
     storage,
