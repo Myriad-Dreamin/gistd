@@ -1,5 +1,3 @@
-// @ts-ignore
-import type { LazyFont } from "typst.ts-0.14/dist/esm/options.init.mjs";
 import remoteFontInfo from "./fontInfo.json";
 import { cssToFontInformation } from "./font-css";
 import { googleFontsCssUrl } from "./font-spec";
@@ -35,13 +33,6 @@ interface FontCache<T = Uint8Array> {
   ttl: number;
 }
 
-interface FontToLoad {
-  conditionKey: string;
-  url: string;
-  dataFut: Promise<Uint8Array>;
-  ttl: number;
-}
-
 function fontCacheKey(font: {
   conditions: { t: string; v: string }[];
   url: string;
@@ -69,9 +60,9 @@ const refreshDate = () => {
  * Loads a font by a lazy font synchronously, which is required by the compiler.
  * @param font
  */
-export function loadFontSync(
-  font: LazyFont & { url: string }
-): (index: number) => Uint8Array {
+export function loadFontSync(font: {
+  url: string;
+}): (index: number) => Uint8Array {
   return () => {
     const xhr = new XMLHttpRequest();
     xhr.overrideMimeType("text/plain; charset=x-user-defined");
@@ -422,62 +413,57 @@ export async function getWithIDBFontProvider(
     fonts: [],
   };
 
-  // for all fonts that is requested, we refresh the ttl
-  // font rest fonts, if it exceeds ttl, we remove it
-  const loadedFontFuts: Promise<Uint8Array>[] = [];
-  const fontsToLoad: Record<string, FontToLoad> = {};
+  // Cached fonts are read from IndexedDB up front (local, fast). Uncached
+  // fonts that are likely needed (core defaults + fonts documents used before)
+  // are prefetched in parallel; the rest are fetched only when the compiler
+  // first asks for them: it calls `blob()` lazily and synchronously, so those
+  // misses use a sync XHR. Everything fetched is persisted for next time.
+  const cachedData: (Uint8Array | undefined)[] = [];
   for (const remoteFont of fontInfo) {
     const conditionKey = fontCacheKey(remoteFont);
     const obj = await promisifiedReq<FontCache>(
       fontCacheFull.get(conditionKey)
     );
-    const ttl = refreshDate();
     if (obj) {
-      obj.ttl = ttl;
-      fontCache.put(obj, conditionKey);
-      loadedFontFuts.push(Promise.resolve(obj.data));
-    } else {
-      const dataFut = fetch(remoteFont.url)
-        .then((res) => res.arrayBuffer())
-        .then((buffer) => new Uint8Array(buffer));
-      fontsToLoad[conditionKey] ||= {
-        conditionKey,
-        url: remoteFont.url,
-        dataFut,
-        ttl,
-      };
-      loadedFontFuts.push(dataFut);
+      // Refresh the ttl on the small metadata record; gc only reads that one.
+      fontCache.put(
+        { data: obj.data.length, url: obj.url, ttl: refreshDate() },
+        conditionKey
+      );
     }
+    cachedData.push(obj?.data);
   }
 
-  const loadedFonts = await Promise.all(loadedFontFuts);
-
-  const tx2 = idb.transaction(["fontCache", "fontCacheFull"], "readwrite");
-  fontCache = tx2.objectStore("fontCache");
-  fontCacheFull = tx2.objectStore("fontCacheFull");
-  for (const { conditionKey, url, dataFut, ttl } of Object.values(
-    fontsToLoad
-  )) {
-    const data = await dataFut;
+  const persist = (conditionKey: string, url: string, data: Uint8Array) => {
+    const ttl = refreshDate();
+    const tx2 = idb.transaction(["fontCache", "fontCacheFull"], "readwrite");
+    tx2
+      .objectStore("fontCache")
+      .put({ data: data.length, url, ttl }, conditionKey);
+    tx2.objectStore("fontCacheFull").put({ data, url, ttl }, conditionKey);
     add.dataLen += data.length;
     add.fonts.push([url, conditionKey]);
-    fontCache.put(
-      {
-        data: data.length,
-        url,
-        ttl,
-      },
-      conditionKey
-    );
-    fontCacheFull.put(
-      {
-        data: data,
-        url,
-        ttl,
-      },
-      conditionKey
-    );
-  }
+  };
+
+  const usedFonts = readUsedFonts();
+  await Promise.all(
+    fontInfo.map(async (font, i) => {
+      const likelyNeeded =
+        usedFonts.has(font.url) ||
+        CORE_FONTS.some((name) => font.url.endsWith(`/${name}`));
+      if (cachedData[i] || !likelyNeeded) return;
+      try {
+        const res = await fetch(font.url);
+        if (!res.ok) return;
+        const data = new Uint8Array(await res.arrayBuffer());
+        cachedData[i] = data;
+        persist(fontCacheKey(font), font.url, data);
+      } catch (e) {
+        console.warn("font prefetch failed, will load on demand", font.url, e);
+      }
+    })
+  );
+
   // delete all local fonts that is exceed ttl
   (async () => {
     const tx3 = idb.transaction(["fontCache", "fontCacheFull"], "readwrite");
@@ -505,8 +491,47 @@ export async function getWithIDBFontProvider(
     };
   })();
 
-  return fontInfo.map((font, i) => ({
-    blob: () => loadedFonts[i],
-    ...font,
-  }));
+  return fontInfo.map((font, i) => {
+    let data = cachedData[i];
+    return {
+      ...font,
+      blob: () => {
+        if (!usedFonts.has(font.url)) {
+          usedFonts.add(font.url);
+          localStorage.setItem(USED_FONTS_KEY, JSON.stringify([...usedFonts]));
+        }
+        if (!data) {
+          console.log("loading font on demand:", font.url);
+          data = loadFontSync(font)(0);
+          if (data.length > 0) persist(fontCacheKey(font), font.url, data);
+        }
+        return data;
+      },
+    };
+  });
+}
+
+/// Fonts nearly every document needs (Typst defaults for text, math, raw).
+const CORE_FONTS = [
+  "LibertinusSerif-Regular.otf",
+  "LibertinusSerif-Bold.otf",
+  "LibertinusSerif-Italic.otf",
+  "NewCMMath-Book.otf",
+  "DejaVuSansMono.ttf",
+];
+
+/// URLs of fonts the compiler has requested before on this device.
+const USED_FONTS_KEY = "gistd-font-used";
+
+function readUsedFonts(): Set<string> {
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(USED_FONTS_KEY) || "[]"
+    );
+    return new Set(
+      Array.isArray(parsed) ? parsed.filter((u) => typeof u === "string") : []
+    );
+  } catch {
+    return new Set();
+  }
 }
