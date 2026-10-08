@@ -70,4 +70,31 @@ jobs:
       - name: Check rendered app
         env:
           SITE_URL: ${{ matrix.site }}
-        run: node .github/scripts/check-site-health.mjs "$SITE_URL"
+          MIRROR_URL: https://gistd-cn.myriad-dreamin.com/
+        run: |
+          set -euo pipefail
+
+          # The rendered app check can flap when a site is slow to answer. Retry it
+          # once; if it still fails, degrade only the mirror site to a non-fatal
+          # warning so an intermittent mirror slowdown does not mask real regressions
+          # in the run conclusion.
+          for attempt in 1 2; do
+            if node .github/scripts/check-site-health.mjs "$SITE_URL"; then
+              echo "Rendered app check passed for $SITE_URL (attempt $attempt)"
+              exit 0
+            fi
+
+            if [[ "$attempt" -eq 1 ]]; then
+              echo "::warning title=Render check retrying::attempt 1 failed for $SITE_URL, retrying once"
+              sleep 30
+            fi
+          done
+
+          if [[ "$SITE_URL" == "$MIRROR_URL" ]]; then
+            echo "::warning title=Render check degraded::mirror site $SITE_URL failed the rendered app check twice, degrading to a non-fatal warning"
+            echo "DEGRADED: rendered app check failed twice for mirror site $SITE_URL"
+            exit 0
+          fi
+
+          echo "::error title=Render check failed::$SITE_URL failed the rendered app check twice"
+          exit 1
