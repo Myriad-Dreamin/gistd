@@ -4,9 +4,9 @@ export default defineConfig({
   build: {
     assetsInlineLimit: (id, content) =>
       id.endsWith(".css") || content.length < 4096,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        inlineDynamicImports: true,
+        codeSplitting: false,
       },
     },
   },
