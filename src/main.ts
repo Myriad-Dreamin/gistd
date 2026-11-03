@@ -3,7 +3,7 @@ import "./typst.ts";
 import van, { State } from "vanjs-core";
 const { div, button, a } = van.tags;
 
-import { DirectoryView, FsItemState } from "./fs";
+import { DirectoryView, FsHooks, FsItemState } from "./fs";
 import { TypstDocument, Doc } from "./doc";
 import { argsFromUrl } from "./args";
 import { getFontProvider } from "./font";
@@ -110,8 +110,12 @@ const App = () => {
     compilerLoaded = van.state(false),
     /// Captures font load status
     fontLoaded = van.state(false),
-    /// Binds to filesystem reload event
-    reloadBell = van.state(false);
+    /// Binds to filesystem reload event (bumped on every fs (re)load)
+    reloadBell = van.state(0),
+    /// Sparse checkout hooks, filled in by DirectoryView
+    fsHooks: FsHooks = {};
+  /// Consecutive recompiles triggered by writing out missing files
+  let materializeRounds = 0;
   const {
     /// Creates storage spec from url
     storage,
@@ -150,9 +154,8 @@ const App = () => {
     /// Record current visited idx for each label
     labelCurrentIdx = van.state<Record<string, number>>({});
 
-  /// Storage spec
-  const mainFilePath = storage.mainFilePath(),
-    url = storage.originUrl(),
+  /// Storage spec (main file path is read at use: git refs resolve later)
+  const url = storage.originUrl(),
     fileName = storage.fileName(),
     description = storage.description(),
     removeExtension = fileName.replace(/\.typ$/, "");
@@ -220,17 +223,28 @@ const App = () => {
 
         setTypstTheme(darkMode.val);
 
-        console.log("start compile", mainFilePath);
+        console.log("start compile", storage.mainFilePath());
 
         const compileResult = await compileTypstDocument($typst, {
-          mainFilePath,
+          mainFilePath: storage.mainFilePath(),
           queryPdfpc: mode === "slide",
         });
         console.log("diagnostics", compileResult.diagnostics);
         if (compileResult.hasError) {
-          error.val = compileResult.diagnostics || [];
+          const diagnostics = compileResult.diagnostics || [];
+          if (
+            materializeRounds < 10 &&
+            (await fsHooks.materializeMissing?.(diagnostics))
+          ) {
+            materializeRounds++;
+            console.log("wrote out missing files, recompiling");
+            reloadBell.val++;
+            return;
+          }
+          error.val = diagnostics;
           return;
         }
+        materializeRounds = 0;
 
         if (compileResult.vector !== undefined) {
           typstDoc.val?.addChangement([
@@ -417,7 +431,7 @@ const App = () => {
 
   const exportPdf = async () => {
     setTypstTheme(false);
-    const pdfData = await $typst.pdf({ mainFilePath });
+    const pdfData = await $typst.pdf({ mainFilePath: storage.mainFilePath() });
     return exportAs(pdfData, "application/pdf");
   };
 
@@ -428,6 +442,7 @@ const App = () => {
     focusFile,
     reloadBell,
     error: error as State<string>,
+    fsHooks,
   });
 
   return div(

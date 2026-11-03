@@ -1,5 +1,10 @@
 import { expect, test } from "vitest";
-import { corsUrl, createStorageSpecExt, storageSpecFromPath } from "./storage";
+import {
+  corsUrl,
+  createStorageSpecExt,
+  refSegmentCount,
+  storageSpecFromPath,
+} from "./storage";
 
 test("redirect to README", () => {
   expect(storageSpecFromPath("")).toMatchInlineSnapshot(`
@@ -131,7 +136,10 @@ test("default cors proxy uses same-origin path", () => {
     "/git-cors-proxy/github.com/Myriad-Dreamin/gistd.git/info/refs?service=git-upload-pack"
   );
   expect(
-    corsUrl("https://github.com/Myriad-Dreamin/gistd/raw/main/README.typ", false)
+    corsUrl(
+      "https://github.com/Myriad-Dreamin/gistd/raw/main/README.typ",
+      false
+    )
   ).toBe("https://github.com/Myriad-Dreamin/gistd/raw/main/README.typ");
   expect(
     corsUrl(
@@ -141,4 +149,23 @@ test("default cors proxy uses same-origin path", () => {
   ).toBe(
     "http://localhost:9999/github.com/Myriad-Dreamin/gistd.git/info/refs?service=git-upload-pack"
   );
+});
+
+test("refSegmentCount picks the longest matching ref", () => {
+  const refs = [
+    "HEAD",
+    "refs/heads/main",
+    "refs/heads/coro",
+    "refs/heads/coro/delegation-study",
+    "refs/tags/v1/rc",
+  ];
+  const count = (path: string) => refSegmentCount(path.split("/"), refs);
+  expect(count("main/paper/main.typ")).toBe(1);
+  expect(count("coro/delegation-study/crates/paper.typ")).toBe(2);
+  expect(count("coro/other/paper.typ")).toBe(1);
+  expect(count("v1/rc/main.typ")).toBe(2);
+  // the last segment is always left for the file
+  expect(count("coro/delegation-study")).toBe(1);
+  // unknown refs (e.g. commit hashes) default to one segment
+  expect(count("89944b7/paper/main.typ")).toBe(1);
 });
