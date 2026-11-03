@@ -102,7 +102,7 @@ export interface DirectoryViewState {
   compilerLoaded: State<boolean>;
   changeFocusFile: State<FsItemState | undefined>;
   focusFile: State<FsItemState | undefined>;
-  reloadBell: State<boolean>;
+  reloadBell: State<number>;
   error: State<string>;
 }
 
@@ -151,7 +151,8 @@ export const DirectoryView = async ({
         remoteFsLoaded,
         fsState,
         error,
-        intoCompiler
+        intoCompiler,
+        refreshFromRemote
       ).load();
       break;
     }
@@ -197,14 +198,48 @@ export const DirectoryView = async ({
 
       reloadAll(fsState.val);
       console.log("read fs done");
-      reloadBell.val = true;
+      reloadBell.val++;
     });
   }
+
+  /// Adds or updates files in the file list (un-deleting re-added paths).
+  function addFiles(files: Map<string, Uint8Array>) {
+    let state = fsState.val!;
+    for (const [path, data] of files) {
+      const prev = state.pathSet.get(path);
+      if (prev) prev.deleted.val = false;
+      state = state.add(path, data);
+    }
+    return (fsState.val = state);
+  }
+
+  /// Applies files fetched in background after the cached copy was compiled.
+  async function refreshFromRemote(files: Map<string, Uint8Array>) {
+    // Before the initial load, the loader reads the fresh files itself.
+    if (!loaded.val) return;
+    const state = addFiles(files);
+    await reloadAll(state);
+    for (const item of state.fsList) {
+      if (!files.has(item.path) && !item.deleted.val) {
+        item.deleted.val = true;
+        await window.$typst.unmapShadow?.(item.path);
+      }
+    }
+    reloadBell.val++;
+  }
 };
+
+/// Record in the `gistd-git-meta` IndexedDB, one per cached repository ref.
+interface GitCacheMeta {
+  db: string;
+  ttl: number;
+  loaded: boolean;
+}
 
 class GitLoader {
   private cacheKey: string;
   private fs: LightningFS;
+  private idb!: IDBDatabase;
 
   constructor(
     public projectDir: string,
@@ -212,30 +247,53 @@ class GitLoader {
     public remoteFsLoaded: State<boolean>,
     public fsState: State<FsState | undefined>,
     public error: State<string>,
-    public intoCompiler: (loader: () => Promise<void>) => any
+    public intoCompiler: (loader: () => Promise<void>) => any,
+    public onRemoteUpdated: (files: Map<string, Uint8Array>) => Promise<void>
   ) {
     this.cacheKey = `gistd-git-${this.storage.remoteUrl()}$$[${
       this.storage.spec.ref
     }]`;
     this.fs = this.createFs(false);
     this.intoCompiler(async () => {
-      const addPath = async (path: string) => {
-        // read type
-        const type = await this.fs.promises.stat(path);
-        if (type.isDirectory()) {
-          for (const fileName of await this.fs.promises.readdir(path)) {
-            await addPath(
-              path === "/" ? "/" + fileName : dirJoin(path, fileName)
-            );
-          }
-        } else {
-          const data = await this.fs.promises.readFile(path);
-          this.fsState.val = this.fsState.val!.add(path, data);
-        }
-      };
-
-      await addPath(this.projectDir);
+      for (const [path, data] of await this.readAllFiles()) {
+        this.fsState.val = this.fsState.val!.add(path, data);
+      }
     });
+  }
+
+  private async readAllFiles() {
+    const files = new Map<string, Uint8Array>();
+    const addPath = async (path: string) => {
+      const type = await this.fs.promises.stat(path);
+      if (type.isDirectory()) {
+        for (const fileName of await this.fs.promises.readdir(path)) {
+          if (path === "/" && fileName === ".git") continue;
+          await addPath(
+            path === "/" ? "/" + fileName : dirJoin(path, fileName)
+          );
+        }
+      } else {
+        files.set(path, await this.fs.promises.readFile(path));
+      }
+    };
+    await addPath(this.projectDir);
+    return files;
+  }
+
+  private headOid() {
+    return git
+      .resolveRef({ fs: this.fs, dir: "/", ref: "HEAD" })
+      .catch(() => undefined);
+  }
+
+  private async putMeta(loaded: boolean) {
+    const meta: GitCacheMeta = {
+      db: this.cacheKey,
+      ttl: refreshDate(),
+      loaded,
+    };
+    const tx = this.idb.transaction([`igit-meta`], "readwrite");
+    await promisifiedReq(tx.objectStore(`igit-meta`).put(meta, this.cacheKey));
   }
 
   private createFs(wipe: boolean) {
@@ -261,56 +319,45 @@ class GitLoader {
         const db = (event.target as any).result;
         db.createObjectStore(`igit-meta`);
       };
-      const idb = await promisifiedReq<IDBDatabase>(req);
+      this.idb = await promisifiedReq<IDBDatabase>(req);
+      const idb = this.idb;
       let meta: IDBObjectStore;
 
       /// Loads from local cache
-      const tx = idb.transaction([`igit-meta`], "readwrite");
-      meta = tx.objectStore(`igit-meta`);
-      const oldMeta = await promisifiedReq<{
-        db: string;
-        ttl: number;
-        loaded: boolean;
-      }>(meta.get(this.cacheKey));
-      this.remoteFsLoaded.val = oldMeta?.loaded;
-      await promisifiedReq(
-        meta.put(
-          {
-            db: this.cacheKey,
-            ttl: refreshDate(),
-            loaded: this.remoteFsLoaded.val,
-          },
-          this.cacheKey
-        )
+      const tx = idb.transaction([`igit-meta`], "readonly");
+      const oldMeta = await promisifiedReq<GitCacheMeta | undefined>(
+        tx.objectStore(`igit-meta`).get(this.cacheKey)
       );
-      tx.commit();
+      /// Cache hit: compile the local copy right away, refresh in background.
+      const cached = oldMeta?.loaded === true;
+      this.remoteFsLoaded.val = cached;
+      await this.putMeta(cached);
 
-      /// Loads from git
+      /// Loads from git (in background if cached)
+      const headBefore = cached ? await this.headOid() : undefined;
       this.tryLoadFromGit()
-        .then(() => {
+        .then(async () => {
           this.error.val = "";
-          return (this.remoteFsLoaded.val = true);
+          await this.putMeta(true);
+          if (!cached) {
+            this.remoteFsLoaded.val = true;
+            return;
+          }
+          const headAfter = await this.headOid();
+          console.log("git refresh:", headBefore, "->", headAfter);
+          if (headAfter !== headBefore) {
+            await this.onRemoteUpdated(await this.readAllFiles());
+          }
         })
         .catch((e) => {
           console.error(e);
+          if (cached) {
+            console.warn("git refresh failed, keeping cached copy");
+            return;
+          }
           this.error.val = `Failed to load git repository: ${e}`;
-          return (this.remoteFsLoaded.val = false);
+          this.remoteFsLoaded.val = false;
         });
-
-      /// Updates metadata
-      const tx2 = idb.transaction([`igit-meta`], "readwrite");
-      meta = tx2.objectStore(`igit-meta`);
-      await promisifiedReq(
-        meta.put(
-          {
-            db: this.cacheKey,
-            ttl: refreshDate(),
-            loaded: this.remoteFsLoaded.val,
-          },
-          this.cacheKey
-        )
-      );
-      tx2.commit();
 
       /// Updates cache
       gc();
@@ -324,11 +371,7 @@ class GitLoader {
           const cursor: IDBCursorWithValue | null = (event.target as any)
             ?.result;
           if (cursor) {
-            const value: {
-              db: string;
-              ttl: number;
-              loaded: boolean;
-            } = cursor?.value;
+            const value: GitCacheMeta = cursor?.value;
             if (value.ttl < now) {
               // delete entire db
               deleteFuts.push(
@@ -421,11 +464,24 @@ async function loadFromGit(
     ref: spec.ref,
   };
 
-  try {
-    await fs.promises.readFile("/.git/config");
-    await git.fetch(g);
-  } catch (e) {
+  const hasRepo = await fs.promises.readFile("/.git/config").then(
+    () => true,
+    () => false
+  );
+  if (!hasRepo) {
     await git.clone(g);
+  } else {
+    const { fetchHead } = await git.fetch(g);
+    // `fetch` only moves the remote-tracking ref; fast-forward the local
+    // branch so checkout picks up new commits.
+    const ref = `refs/heads/${spec.ref}`;
+    const isBranch = await git.resolveRef({ fs, dir: "/", ref }).then(
+      () => true,
+      () => false
+    );
+    if (fetchHead && isBranch) {
+      await git.writeRef({ fs, dir: "/", ref, value: fetchHead, force: true });
+    }
   }
   await git.setConfig({ ...g, path: "user.name", value: "gistd" });
   await git.setConfig({ ...g, path: "user.email", value: "me@gistd.com" });
