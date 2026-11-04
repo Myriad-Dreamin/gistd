@@ -150,9 +150,8 @@ const App = () => {
     /// Record current visited idx for each label
     labelCurrentIdx = van.state<Record<string, number>>({});
 
-  /// Storage spec
-  const mainFilePath = storage.mainFilePath(),
-    url = storage.originUrl(),
+  /// Storage spec (main file path is read at use: git refs resolve later)
+  const url = storage.originUrl(),
     fileName = storage.fileName(),
     description = storage.description(),
     removeExtension = fileName.replace(/\.typ$/, "");
@@ -220,10 +219,10 @@ const App = () => {
 
         setTypstTheme(darkMode.val);
 
-        console.log("start compile", mainFilePath);
+        console.log("start compile", storage.mainFilePath());
 
         const compileResult = await compileTypstDocument($typst, {
-          mainFilePath,
+          mainFilePath: storage.mainFilePath(),
           queryPdfpc: mode === "slide",
         });
         console.log("diagnostics", compileResult.diagnostics);
@@ -417,7 +416,7 @@ const App = () => {
 
   const exportPdf = async () => {
     setTypstTheme(false);
-    const pdfData = await $typst.pdf({ mainFilePath });
+    const pdfData = await $typst.pdf({ mainFilePath: storage.mainFilePath() });
     return exportAs(pdfData, "application/pdf");
   };
 
